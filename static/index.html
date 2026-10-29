@@ -23,6 +23,10 @@
                     <div style="font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px;">3D HUMANOID NEURAL CORE</div>
                 </div>
             </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <input id="avatar-url-input" type="text" placeholder="Paste .GLB / ReadyPlayerMe URL..." style="background: rgba(13,20,36,0.8); border: 1px solid var(--border); color: #fff; font-size: 11px; padding: 5px 10px; border-radius: 12px; outline: none; width: 170px;">
+                <button onclick="loadAvatar(document.getElementById('avatar-url-input').value)" style="background: var(--primary); border: none; color: #000; font-size: 11px; font-weight: bold; padding: 5px 10px; border-radius: 10px; cursor: pointer;">Load</button>
+            </div>
             <div class="status-badge">
                 <span class="status-dot"></span>
                 <span id="system-status">NEURAL LINK ACTIVE</span>

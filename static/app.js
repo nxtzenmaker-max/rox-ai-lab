@@ -1,56 +1,93 @@
 // ==========================================
-// ROX 3D HUMANOID AI - JAW LIP-SYNC & AUDIO ENGINE
+// ROX 3D HUMANOID AI - GLB AVATAR & LIP-SYNC ENGINE
 // ==========================================
 
 let scene, camera, renderer, controls;
-let avatarGroup, jawGroup, eyeLightLeft, eyeLightRight;
-let holoRing1, holoRing2;
-let audioCtx, analyser, audioSource, audioElem;
-let isSpeaking = false;
+let avatarGroup, jawGroup;
+let gltfAvatar = null;
+let morphMeshes = [];
+let jawOpenIndex = -1;
 let mouthOpenTarget = 0;
+let isSpeaking = false;
+let audioCtx, analyser, audioSource, audioElem;
+
+// Default Cool Ready Player Me Avatar (Cyberpunk Male)
+const DEFAULT_AVATAR_URL = "https://models.readyplayer.me/64b52b2f29b4e051c07f2402.glb?morphTargets=ARKit,Oculus+Visemes";
 
 // Initialize 3D Scene
 function init3D() {
     const container = document.getElementById('canvas-container');
     
-    // Scene & Camera
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x060913, 0.05);
+    scene.fog = new THREE.FogExp2(0x060913, 0.04);
 
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0.5, 3.2);
+    camera.position.set(0, 1.4, 2.5);
 
-    // Renderer
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.outputEncoding = THREE.sRGBEncoding;
     container.appendChild(renderer.domElement);
 
-    // Controls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.maxDistance = 5;
-    controls.minDistance = 1.5;
-    controls.maxPolarAngle = Math.PI / 2 + 0.1;
+    controls.target.set(0, 1.3, 0);
+    controls.maxDistance = 4;
+    controls.minDistance = 1;
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0x0f172a, 2.0);
+    // Cinematic Studio Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0x00f2fe, 2.5);
-    dirLight.position.set(2, 4, 3);
-    scene.add(dirLight);
+    const keyLight = new THREE.DirectionalLight(0x00f2fe, 2.0);
+    keyLight.position.set(2, 3, 2);
+    scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0xff007f, 2.0);
-    rimLight.position.set(-3, 2, -2);
+    const rimLight = new THREE.DirectionalLight(0xff007f, 1.8);
+    rimLight.position.set(-2, 2, -2);
     scene.add(rimLight);
 
-    buildCyberHumanoid();
     createParticleMatrix();
+    loadAvatar(DEFAULT_AVATAR_URL);
 
     window.addEventListener('resize', onWindowResize);
+}
+
+// Load Ready Player Me or any GLB Humanoid Character
+function loadAvatar(url) {
+    const loader = new THREE.GLTFLoader();
+    console.log("Loading 3D Avatar:", url);
+
+    loader.load(
+        url,
+        (gltf) => {
+            if (gltfAvatar) scene.remove(gltfAvatar);
+            gltfAvatar = gltf.scene;
+            gltfAvatar.position.set(0, 0, 0);
+            scene.add(gltfAvatar);
+
+            // Find meshes with blendshapes / morph targets for lip-sync
+            morphMeshes = [];
+            gltfAvatar.traverse((child) => {
+                if (child.isMesh && child.morphTargetDictionary) {
+                    morphMeshes.push(child);
+                    console.log("Found Morph Mesh:", child.name, Object.keys(child.morphTargetDictionary));
+                }
+            });
+
+            console.log("3D Humanoid Loaded Successfully!");
+        },
+        (progress) => {
+            console.log(`Loading Avatar: ${(progress.loaded / progress.total * 100).toFixed(0)}%`);
+        },
+        (error) => {
+            console.warn("Could not load external GLB, falling back to Cyber-Rig:", error);
+            buildCyberHumanoid();
+        }
+    );
 }
 
 // Build Articulated 3D Cyber Humanoid
@@ -194,23 +231,38 @@ function animate() {
         const freqData = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(freqData);
 
-        // Calculate average speech volume in vocal frequency range (300Hz - 3kHz)
         let sum = 0;
         const binCount = 35;
         for (let i = 2; i < binCount; i++) {
             sum += freqData[i];
         }
         const avg = sum / (binCount - 2);
-        
-        // Map volume to jaw rotation angle (0 to 0.45 radians)
-        mouthOpenTarget = (avg / 255.0) * 0.5;
+        mouthOpenTarget = Math.min((avg / 255.0) * 1.4, 1.0);
     } else {
         mouthOpenTarget = 0;
     }
 
-    // Smoothly interpolate jaw movement
+    // Drive GLB Morph Targets (Ready Player Me / ARKit)
+    if (morphMeshes.length > 0) {
+        morphMeshes.forEach((mesh) => {
+            const dict = mesh.morphTargetDictionary;
+            const infl = mesh.morphTargetInfluences;
+            if (!dict || !infl) return;
+
+            // Target jawOpen, mouthOpen, or viseme_aa
+            const targets = ['jawOpen', 'mouthOpen', 'viseme_aa', 'viseme_O'];
+            targets.forEach((key) => {
+                if (dict[key] !== undefined) {
+                    const idx = dict[key];
+                    infl[idx] += (mouthOpenTarget - infl[idx]) * 0.4;
+                }
+            });
+        });
+    }
+
+    // Fallback: Articulated Procedural Cyber Jaw
     if (jawGroup) {
-        jawGroup.rotation.x += (mouthOpenTarget - jawGroup.rotation.x) * 0.35;
+        jawGroup.rotation.x += (mouthOpenTarget * 0.5 - jawGroup.rotation.x) * 0.35;
     }
 
     drawWaveform();

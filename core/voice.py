@@ -28,13 +28,13 @@ async def generate_speech(text: str, audio_format: str = "mp3") -> bytes:
     return await generate_edge_tts(text)
 
 async def generate_deepgram_tts(text: str, api_key: str, audio_format: str = "mp3") -> bytes:
-    """Uses Deepgram Aura TTS REST API."""
-    voice = os.getenv("DEEPGRAM_VOICE", "aura-orion-en")
+    """Uses Deepgram v2/speak with custom voice model."""
+    voice = os.getenv("DEEPGRAM_VOICE", "flux-shreya-hi")
     
     if audio_format == "mulaw":
-        url = f"https://api.deepgram.com/v1/speak?model={voice}&encoding=mulaw&sample_rate=8000"
+        url = f"https://api.deepgram.com/v2/speak?model={voice}&encoding=mulaw&sample_rate=8000"
     else:
-        url = f"https://api.deepgram.com/v1/speak?model={voice}"
+        url = f"https://api.deepgram.com/v2/speak?model={voice}&expressivity=1"
         
     headers = {
         "Authorization": f"Token {api_key}",

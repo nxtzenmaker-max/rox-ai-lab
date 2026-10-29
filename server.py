@@ -32,6 +32,11 @@ async def serve_index():
     with open(os.path.join(STATIC_DIR, "index.html"), "r", encoding="utf-8") as f:
         return f.read()
 
+@app.get("/call", response_class=HTMLResponse)
+async def serve_call_screen():
+    with open(os.path.join(STATIC_DIR, "call.html"), "r", encoding="utf-8") as f:
+        return f.read()
+
 @app.get("/health")
 async def health_check():
     return {
@@ -54,25 +59,67 @@ async def tts_endpoint(req: TTSRequest):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 # ==========================================
-# TWILIO PHONE AGENT INTEGRATION
+# TWILIO PHONE AGENT INTEGRATION (Turn-by-Turn & Stream)
 # ==========================================
+
+import urllib.parse
+
+@app.api_route("/twilio/audio", methods=["GET", "HEAD"])
+async def twilio_audio_stream(text: str):
+    """Generates audio on the fly for Twilio <Play> tags using Deepgram."""
+    try:
+        audio_bytes = await generate_speech(text, audio_format="mp3")
+        return Response(content=audio_bytes, media_type="audio/mpeg")
+    except Exception as e:
+        print(f"[Twilio Audio Error] {e}")
+        return Response(status_code=500)
 
 @app.post("/twilio/incoming")
 async def twilio_incoming_call(request: Request):
     """
     Twilio calls this webhook when someone dials your number.
-    Returns TwiML instructing Twilio to connect a bidirectional WebSocket stream.
+    Greets caller with Deepgram voice and listens for their command!
     """
     host = request.headers.get("host", "localhost:8000")
-    # Build TwiML WebSocket Stream
-    twiml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+    greeting = "Haan bhai! Main Rox bol raha hoon. Batao kya hukam hai?"
+    encoded_greeting = urllib.parse.quote(greeting)
+
+    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="Polly.Aditi">Connecting to Rox AI assistant.</Say>
-    <Connect>
-        <Stream url="wss://{host}/twilio/stream" />
-    </Connect>
+    <Play>https://{host}/twilio/audio?text={encoded_greeting}</Play>
+    <Gather input="speech" action="/twilio/respond" language="hi-IN" speechTimeout="auto" timeout="5">
+    </Gather>
+    <Say voice="Polly.Aditi">Bhai kuch sunai nahi diya. Phir se call karo!</Say>
 </Response>"""
-    return Response(content=twiml_response, media_type="application/xml")
+    return Response(content=twiml, media_type="application/xml")
+
+@app.post("/twilio/respond")
+async def twilio_respond_call(request: Request):
+    """
+    Processes caller's speech using Rox Brain and speaks back!
+    """
+    host = request.headers.get("host", "localhost:8000")
+    form_data = await request.form()
+    caller_speech = form_data.get("SpeechResult", "").strip()
+    print(f"[Twilio Phone Call] User said: {caller_speech}")
+
+    if not caller_speech:
+        reply = "Bhai awaaz nahi aayi, phir se bolo."
+    else:
+        # Get AI Response from Rox Brain
+        reply = get_ai_response(caller_speech)
+
+    print(f"[Twilio Phone Call] Rox reply: {reply}")
+    encoded_reply = urllib.parse.quote(reply)
+
+    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Play>https://{host}/twilio/audio?text={encoded_reply}</Play>
+    <Gather input="speech" action="/twilio/respond" language="hi-IN" speechTimeout="auto" timeout="5">
+    </Gather>
+    <Say voice="Polly.Aditi">Theek hai bhai, call disconnect kar raha hoon. Alvida!</Say>
+</Response>"""
+    return Response(content=twiml, media_type="application/xml")
 
 @app.websocket("/twilio/stream")
 async def twilio_websocket_stream(websocket: WebSocket):

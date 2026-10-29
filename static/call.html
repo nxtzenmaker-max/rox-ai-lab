@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Calling ROX (RJN)...</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: #080c16; color: #fff; height: 100vh; width: 100vw; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 50px 24px; overflow: hidden; }
+        
+        .caller-info { display: flex; flex-direction: column; align-items: center; margin-top: 30px; }
+        .avatar-wrap { position: relative; width: 130px; height: 130px; margin-bottom: 24px; }
+        .avatar { width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #00f2fe, #4facfe); display: flex; align-items: center; justify-content: center; font-size: 52px; font-weight: 800; color: #080c16; box-shadow: 0 0 35px rgba(0, 242, 254, 0.4); z-index: 2; position: relative; }
+        .pulse-ring { position: absolute; top: -15px; left: -15px; width: 160px; height: 160px; border-radius: 50%; border: 2px solid rgba(0, 242, 254, 0.4); animation: pulse 2s infinite; z-index: 1; }
+        .pulse-ring-2 { position: absolute; top: -30px; left: -30px; width: 190px; height: 190px; border-radius: 50%; border: 1.5px solid rgba(0, 242, 254, 0.2); animation: pulse 2s infinite 0.7s; z-index: 0; }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.85); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 0.2; }
+            100% { transform: scale(0.85); opacity: 0.8; }
+        }
+
+        .caller-name { font-size: 28px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .call-status { font-size: 14px; color: #00f2fe; font-weight: 500; letter-spacing: 1px; }
+
+        .live-transcript { width: 100%; max-width: 360px; height: 160px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 18px; padding: 16px; overflow-y: auto; font-size: 14.5px; line-height: 1.5; color: #cbd5e1; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 8px; }
+        .chat-msg { padding: 8px 12px; border-radius: 12px; font-size: 13.5px; }
+        .chat-msg.rox { background: rgba(0, 242, 254, 0.12); border-left: 3px solid #00f2fe; color: #fff; }
+        .chat-msg.you { background: rgba(255, 255, 255, 0.08); border-left: 3px solid #94a3b8; align-self: flex-end; }
+
+        .call-controls { width: 100%; max-width: 340px; display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px; }
+        .btn-call { width: 72px; height: 72px; border-radius: 50%; border: none; outline: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 28px; transition: 0.2s all; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .btn-start { background: #10b981; color: #fff; }
+        .btn-start:active { transform: scale(0.92); }
+        .btn-end { background: #ef4444; color: #fff; display: none; }
+        .btn-end:active { transform: scale(0.92); }
+
+        .voice-active { animation: glow 1s infinite alternate; }
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
+            to { box-shadow: 0 0 45px rgba(0, 242, 254, 0.9); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="caller-info">
+        <div class="avatar-wrap">
+            <div class="pulse-ring"></div>
+            <div class="pulse-ring-2"></div>
+            <div class="avatar" id="avatar-icon">R</div>
+        </div>
+        <div class="caller-name">ROX (RJN)</div>
+        <div class="call-status" id="call-status">TAP GREEN BUTTON TO CALL</div>
+    </div>
+
+    <!-- Live Transcript Box -->
+    <div class="live-transcript" id="transcript-box">
+        <div class="chat-msg rox"><strong>ROX:</strong> Ready to talk. Call lagao bhai!</div>
+    </div>
+
+    <!-- Controls -->
+    <div class="call-controls">
+        <button class="btn-call btn-start" id="call-btn" title="Start Call">📞</button>
+        <button class="btn-call btn-end" id="hangup-btn" title="End Call">📵</button>
+    </div>
+
+    <script>
+        const callBtn = document.getElementById('call-btn');
+        const hangupBtn = document.getElementById('hangup-btn');
+        const statusEl = document.getElementById('call-status');
+        const transcriptBox = document.getElementById('transcript-box');
+        const avatarEl = document.getElementById('avatar-icon');
+
+        let isCalling = false;
+        let recognition = null;
+        let callTimer = null;
+        let seconds = 0;
+        let audioElem = null;
+
+        function formatTime(s) {
+            const m = Math.floor(s / 60).toString().padStart(2, '0');
+            const sec = (s % 60).toString().padStart(2, '0');
+            return `${m}:${sec}`;
+        }
+
+        function appendMsg(sender, text, isYou) {
+            const div = document.createElement('div');
+            div.className = `chat-msg ${isYou ? 'you' : 'rox'}`;
+            div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+            transcriptBox.appendChild(div);
+            transcriptBox.scrollTop = transcriptBox.scrollHeight;
+        }
+
+        async function speak(text) {
+            statusEl.innerText = "ROX BOL RAHA HAI...";
+            avatarEl.classList.add('voice-active');
+            try {
+                const resp = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const blob = await resp.blob();
+                if (audioElem) audioElem.pause();
+                audioElem = new Audio(URL.createObjectURL(blob));
+                audioElem.onended = () => {
+                    avatarEl.classList.remove('voice-active');
+                    statusEl.innerText = `CONNECTED (${formatTime(seconds)})`;
+                    // Resume listening after speaking
+                    if (isCalling && recognition) {
+                        try { recognition.start(); } catch(e) {}
+                    }
+                };
+                await audioElem.play();
+            } catch(e) {
+                console.error(e);
+                avatarEl.classList.remove('voice-active');
+                if (isCalling && recognition) {
+                    try { recognition.start(); } catch(err) {}
+                }
+            }
+        }
+
+        async function processUserSpeech(text) {
+            appendMsg("YOU", text, true);
+            statusEl.innerText = "ROX SOCH RAHA HAI...";
+
+            try {
+                const resp = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await resp.json();
+                const reply = data.reply || "Kuch samajh nahi aaya bhai.";
+                appendMsg("ROX", reply, false);
+                await speak(reply);
+            } catch (err) {
+                appendMsg("ROX", "Network issue bhai!", false);
+            }
+        }
+
+        function startCall() {
+            isCalling = true;
+            callBtn.style.display = 'none';
+            hangupBtn.style.display = 'flex';
+            seconds = 0;
+            statusEl.innerText = "CONNECTING...";
+
+            callTimer = setInterval(() => {
+                seconds++;
+                if (statusEl.innerText.startsWith("CONNECTED")) {
+                    statusEl.innerText = `CONNECTED (${formatTime(seconds)})`;
+                }
+            }, 1000);
+
+            // Speech Recognition
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRec) {
+                recognition = new SpeechRec();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'hi-IN';
+
+                recognition.onresult = (event) => {
+                    const text = event.results[0][0].transcript;
+                    processUserSpeech(text);
+                };
+
+                recognition.onend = () => {
+                    // Auto-restart listening if not currently speaking
+                    if (isCalling && (!audioElem || audioElem.paused)) {
+                        try { recognition.start(); } catch(e) {}
+                    }
+                };
+
+                recognition.onerror = () => {
+                    if (isCalling && (!audioElem || audioElem.paused)) {
+                        setTimeout(() => {
+                            try { recognition.start(); } catch(e) {}
+                        }, 500);
+                    }
+                };
+            }
+
+            // Greet User
+            const greeting = "Haan bhai! Main Rox bol raha hoon. Batao kya hukam hai?";
+            appendMsg("ROX", greeting, false);
+            speak(greeting);
+        }
+
+        function endCall() {
+            isCalling = false;
+            callBtn.style.display = 'flex';
+            hangupBtn.style.display = 'none';
+            clearInterval(callTimer);
+            statusEl.innerText = "CALL ENDED";
+            avatarEl.classList.remove('voice-active');
+            if (recognition) recognition.stop();
+            if (audioElem) audioElem.pause();
+        }
+
+        callBtn.addEventListener('click', startCall);
+        hangupBtn.addEventListener('click', endCall);
+    </script>
+</body>
+</html>
