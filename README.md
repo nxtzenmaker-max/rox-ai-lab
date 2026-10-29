@@ -6,7 +6,12 @@ An ultra-responsive **3D Humanoid AI Assistant & Autonomous Phone Agent** powere
 
 ## 🌟 Key Features
 
-1. **3D Cyber-Humanoid Avatar (Web UI)**
+1. **⚡ Cyberpunk Interactive Terminal Lab (`rox`)**
+   - Rich terminal interface with ASCII banners, live system metrics, and markdown formatting.
+   - Built-in command interpreter: `/status`, `/3d`, `/voice`, `/sh <command>`.
+   - Talk and pair-program with Rox directly inside your terminal console!
+
+2. **3D Cyber-Humanoid Avatar (Web UI)**
    - Procedural 3D metallic cyber-humanoid rig with articulated jaw.
    - Real-time vocal lip-sync driven by audio frequency analysis (FFT).
    - Audio visualizer, futuristic HUD overlay, and orbit camera controls.
