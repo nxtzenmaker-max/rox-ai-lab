@@ -16,13 +16,11 @@ from tools.tunnel import start_tunnel, start_file_server
 console = Console()
 
 BANNER = """[bold cyan]
- ██████╗  ██████╗ ██╗  ██╗    ████████╗███████╗██████╗ ███╗   ███╗
- ██╔══██╗██╔═══██╗╚██╗██╔╝    ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║
- ██████╔╝██║   ██║ ╚███╔╝        ██║   █████╗  ██████╔╝██╔████╔██║
- ██╔══██╗██║   ██║ ██╔██╗        ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║
- ██║  ██║╚██████╔╝██╔╝ ██╗       ██║   ███████╗██║  ██║██║ ╚═╝ ██║
- ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝       ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝
-[/bold cyan][bold magenta]           ⚡ CUSTOM MULTI-TOOL LAB & TERMINAL SUITE ⚡[/bold magenta]
+  ___  _____  __  _____ ___ ___ __  __ 
+ | _ \/ _ \ \/ / |_   _| __| _ \  \/  |
+ |   / (_) >  <    | | | _||   / |\/| |
+ |_|_\\___/_/\_\   |_| |___|_|_\\_|  |_|
+[/bold cyan][bold magenta]  ⚡ MULTI-TOOL LAB & TERMINAL SUITE ⚡[/bold magenta]
 """
 
 class RoxTerminal:
