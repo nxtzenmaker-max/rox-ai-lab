@@ -124,13 +124,57 @@ def clean_system_cache():
     out = run_safe_shell_command(cmd)
     return [out]
 
-WEB_SEARCH_KEY = os.getenv("WEB_SEARCH_KEY", "fe55PTLHGgIjHGiWvx1KkIZNNAix__3IQraBtDkX")
+PARALLEL_API_KEY = os.getenv("PARALLEL_API_KEY", os.getenv("WEB_SEARCH_KEY", "fe55PTLHGgIjHGiWvx1KkIZNNAix__3IQraBtDkX"))
+
+def search_parallel_ai(query: str, max_results: int = 4) -> str:
+    """Performs real-time web search using Parallel AI (Parallel Web API)."""
+    clean_q = query.strip()
+    if not clean_q or not PARALLEL_API_KEY:
+        return ""
+    try:
+        import urllib.request
+        req_body = json.dumps({
+            "objective": f"Search and summarize real-time web information for: {clean_q}",
+            "search_queries": [clean_q]
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            "https://api.parallel.ai/v1/search",
+            data=req_body,
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": PARALLEL_API_KEY
+            }
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            results = data.get("results", [])
+            snippets = []
+            for r in results[:max_results]:
+                title = r.get("title", "").strip()
+                excerpts = r.get("excerpts", [])
+                excerpt_text = " ".join(excerpts).replace("\n", " ").strip()
+                if len(excerpt_text) > 300:
+                    excerpt_text = excerpt_text[:300] + "..."
+                if title and excerpt_text:
+                    snippets.append(f"• {title}: {excerpt_text}")
+            return "\n".join(snippets) if snippets else ""
+    except Exception as e:
+        print(f"[Parallel AI Search Error] {e}")
+        return ""
 
 def search_web(query: str, max_results: int = 4) -> str:
-    """Performs live web search and returns concise summary snippets."""
+    """Performs live web search using Parallel AI (Parallel Web) with DuckDuckGo fallback."""
     clean_q = query.strip()
     if not clean_q:
         return "Empty query provided."
+
+    # 1. Primary: Parallel AI Real-time Web Search
+    parallel_res = search_parallel_ai(clean_q, max_results=max_results)
+    if parallel_res.strip():
+        return parallel_res
+
+    # 2. Resilient Fallback: DuckDuckGo Search
     try:
         try:
             from ddgs import DDGS
