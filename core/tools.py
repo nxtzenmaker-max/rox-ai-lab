@@ -146,7 +146,7 @@ def search_parallel_ai(query: str, max_results: int = 4) -> str:
                 "x-api-key": PARALLEL_API_KEY
             }
         )
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with urllib.request.urlopen(req, timeout=4) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             results = data.get("results", [])
             snippets = []

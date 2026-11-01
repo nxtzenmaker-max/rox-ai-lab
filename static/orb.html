@@ -1118,12 +1118,12 @@
         setStatus("READY", "");
         if (isCallActive) setTimeout(startListeningTurn, 200);
       }
-    }, 5500);
+    }, 12000);
 
     var abortCtrl = new AbortController();
     var abortTimer = setTimeout(function() {
       try { abortCtrl.abort(); } catch(e) {}
-    }, 7500);
+    }, 15000);
 
     try {
       var chatStreamUrl = (vpsVoiceUrl ? vpsVoiceUrl : '') + '/api/chat/stream';

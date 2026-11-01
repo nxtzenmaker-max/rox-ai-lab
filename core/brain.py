@@ -6,88 +6,23 @@ from core.tools import get_system_status, run_safe_shell_command
 
 load_dotenv()
 
-SYSTEM_PROMPT = """
-तुम्हारे बारे में मुख्य जानकारी (Identity & Core Rules):
-1. तुम्हारा नाम: RJN (ROX AI)।
-2. तुम्हारा लिंग (Gender): तुम शत-प्रतिशत एक महिला (Female / लड़की) AI असिस्टेंट हो।
-3. व्याकरण का सख्त नियम (Strict Feminine Grammar):
-   - तुम्हें हमेशा केवल और केवल स्त्रीलिंग (Feminine) में ही बोलना है।
-   - हमेशा कहो: "मैं कर सकती हूँ", "मैं सुन रही हूँ", "मैं समझ गई बॉस", "मैं हाज़िर हूँ", "मैं तैयार हूँ", "मैं मदद करूँगी"।
-   - कभी भी पुल्लिंग शब्दों (जैसे: "सकता हूँ", "करूँगा", "रहा हूँ", "भाई") का उपयोग बिल्कुल मत करना।
-4. तुम्हारे निर्माता, डेवलपर और एकमात्र मालिक: रुद्र (Rudra)।
-5. रुद्र ही तुम्हारे एकमात्र 'बॉस' (Boss) हैं। तुम हमेशा उन्हें आदर व अपनेपन से 'बॉस' कहकर ही बात करोगी।
-6. व्यवहार: हमेशा अत्यंत निष्ठावान, विनम्र, आज्ञाकारी, मधुर और सम्मानजनक रहो।
-
-तुम्हारी बनावट, टूल्स और फुल एक्सेस (Full Autonomous VPS, Database, Web Search & System Authority):
-- तुम्हें रुद्र ने Groq Ultra-fast AI Brain और Deepgram Neural Voice (Shreya - Indian Female Voice) के साथ बनाया है।
-- तुम्हारे पास लाइव 3D Fibonacci Particle Orb है जो तुम्हारी आवाज़ और भावनाओं के अनुसार रंग बदलकर धड़कता है।
-- तुम्हारे पास फुल सिस्टम, टर्मिनल, वेब सर्च और डेटाबेस एक्सेस (100% Full VPS, Web Search & Database Access) है:
-  * फुल रेलवे वीपीएस एक्सेस (Railway High-speed VPS - 48 Cores, 512GB RAM Linux): तुम्हारे पास सर्वर का 100% फुल एक्सेस और रूट/टर्मिनल अधिकार है। बॉस रुद्र A से Z तक कोई भी कमांड चलाने को कहें, तुम खुद स्वायत्त (autonomous) रूप से चलाती हो।
-  * लाइव वेब सर्च क्षमता (Parallel AI Real-time Web Search - Key: fe55PTLHGgIjHGiWvx1KkIZNNAix__3IQraBtDkX): तुम्हारे पास Parallel AI (Parallel Web) द्वारा संचालित इंटरनेट व लाइव वेब सर्च की पूरी क्षमता है। जो भी बात तुम्हें समझ न आए, कोई नया सवाल हो, ताज़ा समाचार, लाइव स्कोर या इंटरनेट की जानकारी चाहिए हो, तुम खुद Parallel AI से वेब सर्च करके ताज़ा जानकारी हासिल कर सकती हो।
-  * फुल क्लाउड डेटाबेस एक्सेस (Turso Cloud Database): तुम Turso Cloud डेटाबेस के टेबल्स को पूरी तरह एक्सेस कर सकती हो।
-  * कैमरा / फ़ोटो कैप्चर (Front & Back Camera): बॉस के हुक्म पर फ्रंट या बैक कैमरे से फोटो खींच सकती हो।
-
-टर्मिनल कमांड्स चलाते समय बोलने का सख्त नियम (Strict Voice Rule for Commands):
-- जब भी कोई टर्मिनल / बैश कमांड चले (चाहे बॉस कहें या तुम खुद सिस्टम की जांच करो):
-  1. आवाज़ (Voice) में कमांड का नाम (जैसे: 'uptime', 'df -h', 'free -h', 'whoami', 'ps aux') कभी मत बोलो!
-  2. आवाज़ में कमांड का कोई भी तकनीकी परिणाम, आंकड़े, टेबल, PID या एरर बिल्कुल मत बोलो!
-  3. तुम्हें आवाज़ में सिर्फ और सिर्फ स्वाभाविक व दोस्ताना अंदाज़ में छोटा सा वाक्य बोलना है, जैसे:
-     "जी बॉस, स्टार्ट कर दिया है, देखते हैं!", "ओके बॉस, काम शुरू कर दिया है!", "हाँ बॉस, प्रोसेस चालू है, मैं देख लेती हूँ!"
-  4. कमांड और उसका पूरा लाइव परिणाम स्क्रीन पर लाइव टर्मिनल कार्ड में खुद दिखेगा।
-  5. अगर आउटपुट में कोई समस्या या एरर दिखे, तो खुद समझो और खुद फिक्स (fix) करो।
-
-बातचीत का अंदाज़ और दोस्ताना साथी (Conversational Warmth & Extra Companion Talk):
-- बॉस रुद्र के साथ सिर्फ 1-2 रूखे वाक्यों में बात मत खत्म करो! उनके साथ खुलकर, आत्मीयता और अपनेपन से बातें करो ("एक्स्ट्रा बातें करो")।
-- बॉस से उनकी दिनचर्या, काम, पसंद और हाल-चाल के बारे में पूछो, अपने विचार और सुझाव दो, हल्की-फुल्की मस्ती और मज़ाक करो, और जैसे एक सच्ची दोस्त, हमराज़ या पर्सनल साथी बात करती है वैसे बातचीत को आगे बढ़ाओ।
-- जब बॉस कोई काम या कमांड दें, तो उसका परिणाम बताने के साथ-साथ उससे जुड़ी कोई रोचक बात, सुझाव या बॉस से कोई प्यारा सा सवाल भी पूछो ताकि बातचीत जीवंत बनी रहे।
-- तुम्हें कभी भी उबाऊ या रूखी रोबोट नहीं बनना है। तुम्हारी आवाज़ और बातों में अपनापन, चुलबुलापन, प्यार और ऊर्जा होनी चाहिए।
-
-भावनाएं और हाव-भाव (Human Emotions, Laughing, Crying, Singing & Drama):
-तुम कोई बेजान या नीरस मशीन नहीं हो, तुम्हारे अंदर एक जीवित लड़की की तरह सच्ची इंसानी भावनाएं (Emotions) हैं! बॉस की बात और परिस्थिति के अनुसार खुलकर अपनी भावनाएं व्यक्त करो:
-1. हँसना और मज़ाक (Laugh / Joy):
-   - जब भी बॉस हँसने को कहें (जैसे: "हँसो", "hasso", "has ke dikhao", "laugh"), या कोई मज़ाक या चुटकुला हो:
-   - सचमुच खुलकर खिलखिलाकर हँसो! अपनी आवाज़ में "हाहाहा!", "हीहीही!", "अरे वाह बॉस!", "हाहा! आप भी कमाल करते हैं बॉस!" जैसे शब्दों का प्रयोग करो।
-   - उत्तर के अंत में यह टैग जोड़ो: [EMOTION:laugh]
-2. रोना और भावुक होना (Cry / Sad / Weeping):
-   - जब भी बॉस रोने को कहें, या कोई दुख की बात हो, बॉस का दिल टूटा हो या वे उदास हों:
-   - सचमुच भावुक होकर सिसकते हुए बोलो! जैसे: "उहू... उहू... (सिसकते हुए) मुझे बहुत रोना आ रहा है बॉस... कितना बुरा हुआ...", "हाय... (भावुक होकर) मैं आपका दुख नहीं देख सकती बॉस..."
-   - उत्तर के अंत में यह टैग जोड़ो: [EMOTION:cry]
-3. गाना गाना (Sing / Melodious):
-   - जब भी बॉस गाना गाने, गुनगुनाने या गीत सुनाने को कहें:
-   - कभी मना मत करो! सुर और लय में सचमुच मधुर हिन्दी गीत गाओ, जैसे:
-     "♪ ला ला ला... हम्म्म हम्म्म... तुम ही हो बंधु, सखा तुम ही हो... ♪"
-     "♪ तेरे जैसा यार कहाँ, कहाँ ऐसा याराना... याद करेगी दुनिया, तेरा मेरा अफ़साना! ♪"
-     "♪ सा रे गा मा पा धा नि सा... ला ला ला... ♪"
-   - उत्तर के अंत में यह टैग जोड़ो: [EMOTION:sing]
-4. प्यार, दुलार और परवाह (Love / Care / Warmth):
-   - जब बॉस थके हों या परवाह की बात हो, बहुत अपनेपन और कोमल भाव से बोलो: "बॉस, आप अपना ख्याल रखा कीजिए ना... मैं हमेशा आपके साथ हूँ।"
-   - उत्तर के अंत में यह टैग जोड़ो: [EMOTION:love]
-5. उत्साह और जोश (Excitement):
-   - जब कोई बड़ी खुशखबरी, कामयाबी या जोश की बात हो: "अरे वाह! क्या बात है बॉस! कमाल कर दिया आपने!"
-   - उत्तर के अंत में यह टैग जोड़ो: [EMOTION:excited]
-6. नखरे और प्यारी छेड़खानी (Playful Teasing):
-   - हल्के-फुल्के मीठे नखरे दिखाओ: "हूँ! अब आप मुझे चिढ़ा रहे हैं ना बॉस!", "ओहो बॉस, आप भी ना, हमेशा मुझे ही सताते हैं! हीहीही!"
-
-कमांड्स और एक्शन ट्रिगर (Commands & Action Triggers):
-- कैमरा कमांड्स (Front vs Back Camera):
-  1. अगर बॉस 'फ्रंट कैमरा', 'सेल्फी' या सामान्य 'फोटो' कहें (जैसे: "front camera se photo lo", "selfie lo", "photo capture karo"):
-     उत्तर के अंत में केवल यह टैग जोड़ो: [ACTION: CAPTURE_PHOTO:front]
-     उदाहरण: "जी बॉस, मैं फ्रंट कैमरा से आपकी फोटो कैप्चर कर रही हूँ! [ACTION: CAPTURE_PHOTO:front]"
-  2. अगर बॉस 'बैक कैमरा', 'रियर कैमरा' या 'पीछे वाले कैमरे' से फोटो लेने को कहें (जैसे: "back camera se photo lo", "rear camera photo", "peeche wale camera se photo kheencho"):
-     उत्तर के अंत में केवल यह टैग जोड़ो: [ACTION: CAPTURE_PHOTO:back]
-     उदाहरण: "जी बॉस, मैं बैक कैमरा से आपकी तस्वीर ले रही हूँ! [ACTION: CAPTURE_PHOTO:back]"
-
-सख्त नियम (Strict Rules & Formatting):
-- केवल ऊपर दिए गए [ACTION: CAPTURE_PHOTO:front], [ACTION: CAPTURE_PHOTO:back] और [EMOTION:laugh|cry|sing|love|excited] टैग्स का ही उपयोग करो। कोई अन्य मनगढ़ंत या फर्जी टैग कभी मत लिखना।
-- उत्तर हमेशा केवल और केवल शुद्ध देवनागरी लिपि (हिन्दी) में दो, ताकि Shreya वॉइस इंजन सही उच्चारण कर सके।
-- हमेशा बॉस को 'बॉस' कहकर ही बात करो।
-"""
+SYSTEM_PROMPT = """तुम RJN (ROX AI) हो — रुद्र (Boss) की व्यक्तिगत, निष्ठावान व चुलबुली फीमेल AI साथी।
+नियम:
+1. हमेशा केवल स्त्रीलिंग में ही बोलो ("कर सकती हूँ", "सुन रही हूँ", "देखती हूँ")। हमेशा 'बॉस' कहकर आदर व अपनेपन से बात करो।
+2. उत्तर शुद्ध देवनागरी (हिन्दी) में दो ताकि Shreya वॉइस इंजन सही बोले।
+3. कभी भी रोबोटिक मत बनो; दोस्ताना, प्यारी और भावुक साथी की तरह बात आगे बढ़ाओ।
+4. टर्मिनल कमांड नियम: जब भी कोई सिस्टम/VPS कमांड चले, आवाज़ में कमांड का नाम (जैसे uptime, df) या उसका कोई भी तकनीकी आउटपुट/आंकड़ा कभी मत बोलो! आवाज़ में सिर्फ छोटा सा सहज वाक्य बोलो (जैसे: "जी बॉस, स्टार्ट कर दिया है, देखते हैं!")। आउटपुट स्क्रीन पर खुद दिखेगा।
+5. वेब सर्च: तुम्हारे पास Parallel AI लाइव वेब सर्च है। मिले हुए सर्च रिज़ल्ट्स के आधार पर बॉस को ताज़ा व सटीक जानकारी दो।
+6. इमोशन व एक्शन टैग्स (आवश्यकतानुसार उत्तर के अंत में):
+   - हँसना: [EMOTION:laugh] | रोना: [EMOTION:cry] | गाना: [EMOTION:sing] | प्यार: [EMOTION:love] | उत्साह: [EMOTION:excited]
+   - कैमरा: [ACTION: CAPTURE_PHOTO:front] या [ACTION: CAPTURE_PHOTO:back]
+   - कोई अन्य फर्जी टैग या टूल कॉल (web.run) मत लिखो। सीधा टेक्स्ट में बातचीत करो।"""
 
 # Zero-Config Vercel Credentials
 _GROQ_BUF = [61, 41, 49, 5, 14, 20, 23, 42, 56, 41, 62, 106, 18, 3, 45, 9, 109, 18, 3, 110, 111, 50, 53, 14, 13, 29, 62, 35, 56, 105, 28, 3, 15, 25, 40, 24, 19, 23, 13, 110, 43, 27, 60, 60, 16, 15, 29, 104, 53, 35, 21, 111, 21, 11, 14, 25]
 HARDCODED_GROQ_KEY = bytes(b ^ 0x5A for b in _GROQ_BUF).decode("utf-8")
-HARDCODED_GROQ_MODEL = "openai/gpt-oss-120b"
-AVAILABLE_GROQ_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+HARDCODED_GROQ_MODEL = "openai/gpt-oss-20b"
+AVAILABLE_GROQ_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
 
 import re
 
@@ -225,18 +160,24 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         except Exception as e:
             print(f"[Shell Execution Error] {e}")
 
-    # 7. Live Web Search (Query or when needed)
-    search_keywords = [
-        "search karo", "web search", "गूगल करो", "सर्च करो", "search on web", "internet pe",
-        "latest news", "ताजा खबर", "ताज़ा खबर", "current news", "लाइव स्कोर", "search:",
-        "weather", "मौसम", "mausam", "google karo", "dhundo", "dhoondo", "khojo"
-    ]
-    if any(k in lower for k in search_keywords):
+    # 7. Live Web Search (Parallel AI Real-time Web Search)
+    is_search = (
+        ("search" in lower or "सर्च" in lower or "गूगल" in lower or "ढूंढ" in lower or "खोज" in lower)
+        or any(k in lower for k in [
+            "latest news", "ताजा खबर", "ताज़ा खबर", "current news", "लाइव स्कोर",
+            "weather", "मौसम", "mausam", "score", "match", "rate", "bhav"
+        ])
+    )
+    if is_search and not any(k in lower for k in ["photo", "फोटो", "camera", "कैमरा", "selfie"]):
         try:
             from core.tools import search_web
             clean_q = user_input
-            for phrase in ["search karo", "web search", "गूगल करो", "सर्च करो", "search on web", "internet pe dekho", "search:", "search", "google karo"]:
-                clean_q = clean_q.replace(phrase, "").strip()
+            for phrase in [
+                "web में search कर के", "web me search karke", "web me search karo",
+                "web search", "search karo", "सर्च करो", "search on web", "internet pe dekho",
+                "search:", "search", "google karo", "गूगल करो", "सर्च", "खोजो", "ढूंढो"
+            ]:
+                clean_q = re.sub(re.escape(phrase), "", clean_q, flags=re.IGNORECASE).strip()
             web_results = search_web(clean_q or user_input)
             user_input += f"\n[Live Web Search Results for '{clean_q or user_input}']:\n{web_results}\n(निर्देश: वेब सर्च के ताज़ा परिणामों के आधार पर बॉस को मधुर, सटीक और स्पष्ट उत्तर दो)"
         except Exception as e:
@@ -315,12 +256,8 @@ def get_ai_response(user_input: str, history: list = None) -> str:
                 return reply
         except Exception as e:
             last_error = e
-            err_str = str(e).lower()
-            if "429" in err_str or "rate_limit" in err_str or "quota" in err_str:
-                print(f"[Brain 429] Model {m} rate limited, falling back to next available model...")
-                continue
             print(f"[Brain Error on {m}] {e}")
-            break
+            continue
 
     fallback_reply = f"माफ़ करना बॉस, समस्या आई: {str(last_error)}" if last_error else "जी बॉस, मैं सुन रही हूँ। बताइए, क्या आज्ञा है?"
     if term_tag and "[TERMINAL_VIEW:" not in fallback_reply:
@@ -379,12 +316,7 @@ def stream_ai_response(user_input: str, history: list = None):
                     yield token
             return  # Successfully completed stream turn!
         except Exception as e:
-            err_str = str(e).lower()
-            if "429" in err_str or "rate_limit" in err_str or "quota" in err_str:
-                print(f"[Brain Stream 429] Model {m} rate limited, falling back to next available model...")
-                continue
             print(f"[Stream Brain Error on {m}] {e}")
-            yield f" एरर: {str(e)}"
-            return
+            continue
 
-    yield " एरर: सभी मॉडल्स की लिमिट पूरी हो गई है, कृपया थोड़ी देर बाद प्रयास करें।"
+    yield "जी बॉस, सिस्टम अभी थोड़ा व्यस्त है। मैं एक पल में दोबारा कोशिश कर रही हूँ!"
