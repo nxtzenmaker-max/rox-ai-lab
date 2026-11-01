@@ -50,9 +50,85 @@
   .input-bar input::placeholder { color:rgba(255,255,255,0.4); }
   .send-btn { background:#965aff; border:none; color:#fff; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:0.2s; }
   .send-btn:hover { background:#ff50af; }
+
+  /* Camera Shutter Flash */
+  .camera-flash {
+    position: fixed; inset: 0; background: #fff; z-index: 9999;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s ease-out;
+  }
+  .camera-flash.flash-active { opacity: 0.9; transition: none; }
+
+  /* Photo Snapshot Modal */
+  .photo-modal {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(4, 6, 14, 0.82);
+    backdrop-filter: blur(14px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .photo-card {
+    background: rgba(15, 23, 42, 0.96);
+    border: 1.5px solid #00f2fe;
+    box-shadow: 0 0 40px rgba(0, 242, 254, 0.4);
+    border-radius: 22px;
+    padding: 20px;
+    max-width: 440px;
+    width: 100%;
+    display: flex; flex-direction: column; gap: 14px;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+  .photo-header {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .photo-title {
+    color: #00f2fe; font-size: 14px; font-weight: 700; letter-spacing: 1px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .photo-close-btn {
+    background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px; line-height: 1;
+  }
+  .photo-close-btn:hover { color: #fff; }
+  .photo-img {
+    width: 100%; border-radius: 14px; border: 1px solid rgba(0, 242, 254, 0.3);
+    object-fit: cover; max-height: 340px;
+  }
+  .photo-actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+  }
+  .photo-btn {
+    background: linear-gradient(135deg, #00f2fe, #4facfe);
+    color: #080c16; font-size: 13px; font-weight: 700;
+    padding: 8px 18px; border-radius: 10px; border: none; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center;
+    transition: 0.2s;
+  }
+  .photo-btn:hover { transform: scale(1.04); }
+  .photo-btn.secondary {
+    background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2);
+  }
 </style>
 </head>
 <body>
+
+<div id="cameraFlash" class="camera-flash"></div>
+<video id="cameraFeed" autoplay playsinline style="display:none;"></video>
+<canvas id="photoCanvas" style="display:none;"></canvas>
+
+<!-- Photo Modal -->
+<div id="photoModal" class="photo-modal" style="display:none;">
+  <div class="photo-card">
+    <div class="photo-header">
+      <span class="photo-title">📷 PHOTO CAPTURED, BOSS!</span>
+      <button class="photo-close-btn" onclick="closePhotoModal()">✕</button>
+    </div>
+    <img id="photoPreview" class="photo-img" src="" alt="Captured Photo" />
+    <div class="photo-actions">
+      <a id="photoDownloadBtn" class="photo-btn" download="boss-captured.jpg">💾 DOWNLOAD</a>
+      <button class="photo-btn secondary" onclick="closePhotoModal()">DONE</button>
+    </div>
+  </div>
+</div>
 
 <div id="glow"></div>
 <canvas id="c"></canvas>
@@ -250,9 +326,11 @@
       ttsSource = audioCtx.createMediaElementSource(ttsAudioElem);
       ttsSource.connect(analyser);
       ttsSource.connect(audioCtx.destination);
+      if (typeof preloadHmm === 'function') preloadHmm();
     }
     if(audioCtx.state === 'suspended'){
       audioCtx.resume();
+      if (typeof preloadHmm === 'function') preloadHmm();
     }
   }
 
@@ -406,6 +484,105 @@
   var nextPlayTime = 0;
   var activeSources = [];
 
+  // Preloaded Acknowledgement Audio ("हूँ, जी बॉस")
+  var hmmAudioBuf = null;
+  async function preloadHmm() {
+    if (hmmAudioBuf) return;
+    try {
+      var r = await fetch('/static/hmm.mp3');
+      if (r.ok) {
+        var ab = await r.arrayBuffer();
+        ensureAudioCtx();
+        hmmAudioBuf = await audioCtx.decodeAudioData(ab);
+      }
+    } catch(e) {}
+  }
+
+  function playHmmAck() {
+    if (!audioCtx || !hmmAudioBuf) return;
+    try {
+      var s = audioCtx.createBufferSource();
+      s.buffer = hmmAudioBuf;
+      s.connect(analyser);
+      s.connect(audioCtx.destination);
+      s.start(audioCtx.currentTime);
+    } catch(e) {}
+  }
+
+  // Camera Photo Capture Action
+  var cameraStream = null;
+  async function capturePhotoAction() {
+    setStatus("CAPTURING PHOTO...", "thinking");
+    try {
+      if (!cameraStream || !cameraStream.active) {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+      }
+      var video = document.getElementById('cameraFeed');
+      video.srcObject = cameraStream;
+      await video.play();
+
+      setTimeout(function() {
+        var canvas = document.getElementById('photoCanvas');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        var ctx = canvas.getContext('2d');
+        // Mirror horizontally for natural selfie view
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+        // Flash effect and shutter click
+        triggerCameraFlash();
+
+        var preview = document.getElementById('photoPreview');
+        var modal = document.getElementById('photoModal');
+        var dlBtn = document.getElementById('photoDownloadBtn');
+        if (preview && modal) {
+          preview.src = dataUrl;
+          if (dlBtn) dlBtn.href = dataUrl;
+          modal.style.display = 'flex';
+        }
+        setStatus("PHOTO CAPTURED, BOSS!", "speaking");
+      }, 500);
+
+    } catch(err) {
+      console.warn("Camera access error:", err);
+      setStatus("CAMERA PERMISSION NEEDED", "error");
+    }
+  }
+
+  function triggerCameraFlash() {
+    var flash = document.getElementById('cameraFlash');
+    if (flash) {
+      flash.classList.add('flash-active');
+      setTimeout(function(){ flash.classList.remove('flash-active'); }, 200);
+    }
+    if (audioCtx) {
+      try {
+        var osc = audioCtx.createOscillator();
+        var g = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.09);
+        g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.09);
+        osc.connect(g);
+        g.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.09);
+      } catch(e){}
+    }
+  }
+
+  window.closePhotoModal = function() {
+    var modal = document.getElementById('photoModal');
+    if (modal) modal.style.display = 'none';
+  };
+
   function resetAudioEngine() {
     currentTurnId++; // Invalidate any running/delayed fetches from previous turn
     stopAllSpeechAudio();
@@ -427,7 +604,8 @@
   }
 
   function enqueueSentenceChunk(textChunk) {
-    var clean = textChunk.trim();
+    // Strip action tags like [ACTION: CAPTURE_PHOTO] so TTS never speaks raw brackets
+    var clean = textChunk.replace(/\[ACTION:[^\]]+\]/gi, '').trim();
     if (!clean) return;
 
     var chunkIndex = totalChunksCreated++;
@@ -544,6 +722,7 @@
     var fullReply = "";
     var currentSentence = "";
     var turnId = currentTurnId;
+    var actionTriggered = false;
 
     try {
       var resp = await fetch('/api/chat/stream', {
@@ -576,7 +755,14 @@
               fullReply += token;
               currentSentence += token;
 
-              setSubtitle("ROX", fullReply);
+              var cleanSubtitle = fullReply.replace(/\[ACTION:[^\]]+\]/gi, '').trim();
+              setSubtitle("ROX", cleanSubtitle);
+
+              // Trigger photo capture command if requested by Boss
+              if (!actionTriggered && fullReply.includes("[ACTION: CAPTURE_PHOTO]")) {
+                actionTriggered = true;
+                capturePhotoAction();
+              }
 
               // High-quality sentence boundary detection:
               // 1. Sentence enders (Hindi danda ।, period ., question mark ?, exclamation !, newline \n)
@@ -655,8 +841,12 @@
     return new Blob([buffer], { type: 'audio/wav' });
   }
 
+  var consecutiveSpeechFrames = 0;
+  var hasPlayedHmmThisTurn = false;
+
   async function initCallAudioStream() {
     ensureAudioCtx();
+    preloadHmm();
     if (micStream && micStream.active) return true;
 
     try {
@@ -676,13 +866,9 @@
       micProcessor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
       
       micProcessor.onaudioprocess = function(e){
-        // If Rox is speaking or call is not listening, IGNORE audio (prevents self-hearing/echo)
-        if (!isCallActive || isSpeaking || !isListening) return;
+        if (!isCallActive) return;
 
         var input = e.inputBuffer.getChannelData(0);
-        pcmBuffers.push(new Float32Array(input));
-
-        // Real-time Energy / RMS calculation for VAD
         var sum = 0;
         for (var i = 0; i < input.length; i++) {
           sum += input[i] * input[i];
@@ -690,7 +876,41 @@
         var rms = Math.sqrt(sum / input.length);
         var now = Date.now();
 
-        // Voice activity threshold
+        // If Rox is speaking and Boss interrupts him (Live Barge-in):
+        if (isSpeaking) {
+          if (rms > 0.038) { // Distinct Boss voice
+            consecutiveSpeechFrames++;
+            if (consecutiveSpeechFrames >= 2) {
+              consecutiveSpeechFrames = 0;
+              resetAudioEngine(); // Stops Rox speaking immediately!
+
+              if (!hasPlayedHmmThisTurn) {
+                hasPlayedHmmThisTurn = true;
+                playHmmAck(); // Plays "हूँ, जी बॉस" once at the beginning
+              }
+
+              // Switch to listening turn immediately
+              pcmBuffers = [new Float32Array(input)];
+              voiceDetected = true;
+              silenceStartTime = null;
+              isListening = true;
+              micBtn.classList.add('active');
+              setStatus("LISTENING... (SPEAK FREELY)", "listening");
+              glow = 0.7;
+              return;
+            }
+          } else {
+            consecutiveSpeechFrames = 0;
+          }
+          return;
+        }
+
+        // When Rox is NOT speaking (normal listening turn)
+        if (!isListening) return;
+
+        pcmBuffers.push(new Float32Array(input));
+
+        // Real-time Energy / RMS calculation for VAD
         if (rms > 0.016) {
           voiceDetected = true;
           silenceStartTime = null;
@@ -726,6 +946,7 @@
     voiceDetected = false;
     silenceStartTime = null;
     isListening = true;
+    hasPlayedHmmThisTurn = false;
     micBtn.classList.add('active');
     setStatus("LISTENING... (SPEAK FREELY)", "listening");
     glow = 0.7;
@@ -734,6 +955,7 @@
   async function finishSpeechAndProcess() {
     if (!isListening) return;
     isListening = false;
+    hasPlayedHmmThisTurn = false;
     setStatus("THINKING...", "thinking");
 
     var totalLength = 0;
