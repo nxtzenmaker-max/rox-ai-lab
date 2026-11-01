@@ -41,6 +41,8 @@ sleep 2
 CLOUDFLARED_BIN=""
 if [ -x "/home/ipx/cloudflared" ]; then
     CLOUDFLARED_BIN="/home/ipx/cloudflared"
+elif [ -x "$HOME/bin/cloudflared" ]; then
+    CLOUDFLARED_BIN="$HOME/bin/cloudflared"
 elif which cloudflared >/dev/null 2>&1; then
     CLOUDFLARED_BIN="$(which cloudflared)"
 fi
