@@ -239,3 +239,8 @@ async def twilio_websocket_stream(websocket: WebSocket):
         print("[Twilio] WebSocket disconnected.")
     except Exception as e:
         print(f"[Twilio] Error: {e}")
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False)
