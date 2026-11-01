@@ -303,6 +303,20 @@
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.clearColor(0, 0, 0, 0);
 
+  /* ---------- high-speed railway vps voice pipeline ---------- */
+  var vpsVoiceUrl = "";
+  try {
+    fetch('/api/config')
+      .then(function(r){ return r.json(); })
+      .then(function(cfg){
+        if (cfg && cfg.vps_voice_url) {
+          vpsVoiceUrl = cfg.vps_voice_url.replace(/\/$/, "");
+          console.log("[Voice Processing] High-Speed Railway VPS Connected:", vpsVoiceUrl);
+        }
+      })
+      .catch(function(){});
+  } catch(e) {}
+
   /* ---------- audio setup ---------- */
   var audioCtx = null;
   var analyser = null, fft = null;
@@ -870,11 +884,25 @@
   async function fetchTTSChunk(text, index, turnId) {
     try {
       ensureAudioCtx();
-      var resp = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text })
-      });
+      var ttsUrl = (vpsVoiceUrl ? vpsVoiceUrl : '') + '/api/tts';
+      var resp;
+      try {
+        resp = await fetch(ttsUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text })
+        });
+      } catch(netErr) {
+        if (ttsUrl !== '/api/tts') {
+          resp = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: text })
+          });
+        } else {
+          throw netErr;
+        }
+      }
 
       if (turnId !== currentTurnId) return;
 
@@ -1248,11 +1276,25 @@
     var wavBlob = encodeWAV(flatSamples, audioCtx.sampleRate);
 
     try {
-      var resp = await fetch('/api/transcribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'audio/wav' },
-        body: wavBlob
-      });
+      var transcribeUrl = (vpsVoiceUrl ? vpsVoiceUrl : '') + '/api/transcribe';
+      var resp;
+      try {
+        resp = await fetch(transcribeUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'audio/wav' },
+          body: wavBlob
+        });
+      } catch(netErr) {
+        if (transcribeUrl !== '/api/transcribe') {
+          resp = await fetch('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'audio/wav' },
+            body: wavBlob
+          });
+        } else {
+          throw netErr;
+        }
+      }
       var data = await resp.json();
       var transcript = (data.transcript || "").trim();
 

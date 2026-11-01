@@ -2,7 +2,9 @@ import os
 import json
 import base64
 import asyncio
+import aiohttp
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
@@ -14,12 +16,67 @@ load_dotenv()
 from core.brain import get_ai_response, stream_ai_response
 from core.voice import generate_speech, transcribe_audio_deepgram
 from core.db import save_message, log_photo, is_turso_configured
+from core.tools import is_running_on_vps
 
 app = FastAPI(title="ROX AI Lab - 3D Humanoid & Phone Agent")
+
+# Enable CORS for direct high-speed client-to-VPS voice processing
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Mount static frontend
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+def get_vps_voice_url() -> str:
+    """Returns the live high-speed Railway VPS voice endpoint."""
+    env_url = os.getenv("VPS_VOICE_URL", "").strip()
+    if env_url:
+        return env_url.rstrip("/")
+
+    # Check Turso Cloud Database config
+    try:
+        from core.db import execute_sql
+        res = execute_sql("SELECT value FROM vps_config WHERE key = 'voice_url' LIMIT 1")
+        if res.get("rows") and res["rows"][0].get("value"):
+            return res["rows"][0]["value"].strip().rstrip("/")
+    except Exception:
+        pass
+
+    return "https://sampling-camping-appreciated-holding.trycloudflare.com"
+
+@app.on_event("startup")
+async def startup_sync():
+    """Syncs live tunnel URL to Turso DB on VPS startup."""
+    if is_running_on_vps():
+        try:
+            import re
+            tunnel_log = os.path.expanduser("~/tunnel.log")
+            if os.path.exists(tunnel_log):
+                with open(tunnel_log, "r") as f:
+                    content = f.read()
+                matches = re.findall(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", content)
+                if matches:
+                    url = matches[-1].strip()
+                    from core.db import execute_sql
+                    execute_sql("CREATE TABLE IF NOT EXISTS vps_config (key TEXT PRIMARY KEY, value TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+                    execute_sql("INSERT OR REPLACE INTO vps_config (key, value, updated_at) VALUES ('voice_url', ?, CURRENT_TIMESTAMP)", [url])
+                    print(f"[VPS Startup] Synced Voice URL to Turso Cloud DB: {url}")
+        except Exception as e:
+            print(f"[VPS Startup Sync Error] {e}")
+
+@app.get("/api/config")
+async def get_config():
+    """Returns dynamic configuration for client frontend."""
+    return {
+        "vps_voice_url": get_vps_voice_url(),
+        "is_vps": is_running_on_vps()
+    }
 
 class ChatRequest(BaseModel):
     message: str
@@ -90,6 +147,21 @@ async def log_photo_endpoint(req: PhotoLogRequest):
 
 @app.post("/api/tts")
 async def tts_endpoint(req: TTSRequest):
+    # If running on Vercel, forward voice synthesis to high-speed Railway VPS
+    if not is_running_on_vps():
+        vps_url = get_vps_voice_url()
+        if vps_url:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(f"{vps_url}/api/tts", json={"text": req.text}, timeout=10) as resp:
+                        if resp.status == 200:
+                            audio_bytes = await resp.read()
+                            media_type = resp.headers.get("content-type", "audio/mpeg")
+                            return Response(content=audio_bytes, media_type=media_type)
+            except Exception as e:
+                print(f"[Vercel -> VPS TTS Fallback] {e}")
+
+    # Process locally on VPS (or fallback on Vercel)
     try:
         audio_bytes = await generate_speech(req.text, audio_format="mp3")
         return Response(content=audio_bytes, media_type="audio/mpeg")
@@ -103,6 +175,23 @@ async def transcribe_endpoint(request: Request):
     print(f"[Transcribe Request] Content-Type: {content_type}, Size: {len(audio_bytes)} bytes")
     if not audio_bytes:
         return JSONResponse(status_code=400, content={"error": "Empty audio data"})
+
+    # If running on Vercel, forward speech-to-text to high-speed Railway VPS
+    if not is_running_on_vps():
+        vps_url = get_vps_voice_url()
+        if vps_url:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    headers = {"Content-Type": content_type}
+                    async with session.post(f"{vps_url}/api/transcribe", data=audio_bytes, headers=headers, timeout=12) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            print(f"[Vercel -> VPS Transcribe Result] Text: '{data.get('transcript')}'")
+                            return data
+            except Exception as e:
+                print(f"[Vercel -> VPS Transcribe Fallback] {e}")
+
+    # Process locally on VPS (or fallback on Vercel)
     try:
         text = await transcribe_audio_deepgram(audio_bytes, mime_type=content_type)
         print(f"[Transcribe Result] Text: '{text}'")
