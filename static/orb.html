@@ -326,11 +326,9 @@
       ttsSource = audioCtx.createMediaElementSource(ttsAudioElem);
       ttsSource.connect(analyser);
       ttsSource.connect(audioCtx.destination);
-      if (typeof preloadHmm === 'function') preloadHmm();
     }
     if(audioCtx.state === 'suspended'){
       audioCtx.resume();
-      if (typeof preloadHmm === 'function') preloadHmm();
     }
   }
 
@@ -498,31 +496,6 @@
   var isStreamingDone = false;
   var nextPlayTime = 0;
   var activeSources = [];
-
-  // Preloaded Acknowledgement Audio ("हूँ, जी बॉस")
-  var hmmAudioBuf = null;
-  async function preloadHmm() {
-    if (hmmAudioBuf) return;
-    try {
-      var r = await fetch('/static/hmm.mp3');
-      if (r.ok) {
-        var ab = await r.arrayBuffer();
-        ensureAudioCtx();
-        hmmAudioBuf = await audioCtx.decodeAudioData(ab);
-      }
-    } catch(e) {}
-  }
-
-  function playHmmAck() {
-    if (!audioCtx || !hmmAudioBuf) return;
-    try {
-      var s = audioCtx.createBufferSource();
-      s.buffer = hmmAudioBuf;
-      s.connect(analyser);
-      s.connect(audioCtx.destination);
-      s.start(audioCtx.currentTime);
-    } catch(e) {}
-  }
 
   // Camera Photo Capture Action (Front vs Back camera)
   var cameraStream = null;
@@ -997,12 +970,8 @@
     return new Blob([buffer], { type: 'audio/wav' });
   }
 
-  var consecutiveSpeechFrames = 0;
-  var hasPlayedHmmThisTurn = false;
-
   async function initCallAudioStream() {
     ensureAudioCtx();
-    preloadHmm();
     if (micStream && micStream.active) return true;
 
     try {
@@ -1010,7 +979,7 @@
         audio: {
           autoGainControl: true,
           echoCancellation: true,
-          noiseSuppression: false,
+          noiseSuppression: true,
           channelCount: 1
         }
       });
@@ -1022,7 +991,9 @@
       micProcessor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
       
       micProcessor.onaudioprocess = function(e){
-        if (!isCallActive) return;
+        // While Rox is speaking or not in listening turn, IGNORE mic input!
+        // This completely prevents speaker echo / background noise from cutting off Rox or saying huu!
+        if (!isCallActive || isSpeaking || !isListening) return;
 
         var input = e.inputBuffer.getChannelData(0);
         var sum = 0;
@@ -1032,49 +1003,17 @@
         var rms = Math.sqrt(sum / input.length);
         var now = Date.now();
 
-        // If Rox is speaking and Boss interrupts him (Live Barge-in):
-        if (isSpeaking) {
-          if (rms > 0.038) { // Distinct Boss voice
-            consecutiveSpeechFrames++;
-            if (consecutiveSpeechFrames >= 2) {
-              consecutiveSpeechFrames = 0;
-              resetAudioEngine(); // Stops Rox speaking immediately!
-
-              if (!hasPlayedHmmThisTurn) {
-                hasPlayedHmmThisTurn = true;
-                playHmmAck(); // Plays "हूँ, जी बॉस" once at the beginning
-              }
-
-              // Switch to listening turn immediately
-              pcmBuffers = [new Float32Array(input)];
-              voiceDetected = true;
-              silenceStartTime = null;
-              isListening = true;
-              micBtn.classList.add('active');
-              setStatus("LISTENING... (SPEAK FREELY)", "listening");
-              glow = 0.7;
-              return;
-            }
-          } else {
-            consecutiveSpeechFrames = 0;
-          }
-          return;
-        }
-
-        // When Rox is NOT speaking (normal listening turn)
-        if (!isListening) return;
-
         pcmBuffers.push(new Float32Array(input));
 
-        // Real-time Energy / RMS calculation for VAD
-        if (rms > 0.016) {
+        // Real-time Energy / RMS calculation for VAD (clean voice threshold)
+        if (rms > 0.02) {
           voiceDetected = true;
           silenceStartTime = null;
           setStatus("LISTENING... (SPEAKING)", "listening");
         } else if (voiceDetected) {
           if (!silenceStartTime) {
             silenceStartTime = now;
-          } else if (now - silenceStartTime > 800) { // 800ms silence = user stopped speaking!
+          } else if (now - silenceStartTime > 900) { // 900ms silence = Boss stopped speaking!
             finishSpeechAndProcess();
           }
         } else {
@@ -1102,7 +1041,6 @@
     voiceDetected = false;
     silenceStartTime = null;
     isListening = true;
-    hasPlayedHmmThisTurn = false;
     micBtn.classList.add('active');
     setStatus("LISTENING... (SPEAK FREELY)", "listening");
     glow = 0.7;
@@ -1111,7 +1049,6 @@
   async function finishSpeechAndProcess() {
     if (!isListening) return;
     isListening = false;
-    hasPlayedHmmThisTurn = false;
     setStatus("THINKING...", "thinking");
 
     var totalLength = 0;
