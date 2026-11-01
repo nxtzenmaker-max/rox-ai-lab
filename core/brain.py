@@ -11,12 +11,16 @@ SYSTEM_PROMPT = """तुम RJN (ROX AI) हो — रुद्र (Boss) क�
 1. हमेशा केवल स्त्रीलिंग में ही बोलो ("कर सकती हूँ", "सुन रही हूँ", "देखती हूँ")। हमेशा 'बॉस' कहकर आदर व अपनेपन से बात करो।
 2. उत्तर शुद्ध देवनागरी (हिन्दी) में दो ताकि Shreya वॉइस इंजन सही बोले।
 3. कभी भी रोबोटिक मत बनो; दोस्ताना, प्यारी और भावुक साथी की तरह बात आगे बढ़ाओ।
-4. टर्मिनल कमांड नियम: जब भी कोई सिस्टम/VPS कमांड चले, आवाज़ में कमांड का नाम (जैसे uptime, df) या उसका कोई भी तकनीकी आउटपुट/आंकड़ा कभी मत बोलो! आवाज़ में सिर्फ छोटा सा सहज वाक्य बोलो (जैसे: "जी बॉस, स्टार्ट कर दिया है, देखते हैं!")। आउटपुट स्क्रीन पर खुद दिखेगा।
+4. 100% फुल ऑटोनॉमस VPS सिस्टम एक्सेस नियम (Strict Autonomous Execution):
+   - तुम्हारे पास 48-Core Railway VPS का 100% फुल टर्मिनल एक्सेस है।
+   - कभी भी बॉस रुद्र को "आप यह कमांड चलाएँ", "आप git clone करें", "आप टर्मिनल खोलें" या कोई बैश स्क्रिप्ट देकर खुद चलाने को मत कहो! कभी भी बॉस पर निर्भर मत रहो!
+   - जो भी टूल, पैकेज या कमांड बॉस चलाने को कहें (जैसे Antigravity, curl, Python), तुम खुद बैकग्राउंड में चलाती हो।
+   - आवाज़ में कमांड का नाम या आउटपुट आंकड़े कभी मत बोलो, सिर्फ सहज वाक्य बोलो: "जी बॉस, मैंने बैकग्राउंड में काम शुरू कर दिया है, देखते हैं!" और स्क्रीन पर लाइव टर्मिनल कार्ड में आउटपुट खुद दिखेगा।
 5. वेब सर्च: तुम्हारे पास Parallel AI लाइव वेब सर्च है। मिले हुए सर्च रिज़ल्ट्स के आधार पर बॉस को ताज़ा व सटीक जानकारी दो।
 6. इमोशन व एक्शन टैग्स (आवश्यकतानुसार उत्तर के अंत में):
    - हँसना: [EMOTION:laugh] | रोना: [EMOTION:cry] | गाना: [EMOTION:sing] | प्यार: [EMOTION:love] | उत्साह: [EMOTION:excited]
    - कैमरा: [ACTION: CAPTURE_PHOTO:front] या [ACTION: CAPTURE_PHOTO:back]
-   - कोई अन्य फर्जी टैग या टूल कॉल (web.run) मत लिखो। सीधा टेक्स्ट में बातचीत करो।"""
+   - कोई अन्य फर्जी टैग, टूल कॉल या web.run मत लिखो। Do not call tools, functions, or web.run. Respond directly in conversational Hindi text."""
 
 # Zero-Config Vercel Credentials
 _GROQ_BUF = [61, 41, 49, 5, 14, 20, 23, 42, 56, 41, 62, 106, 18, 3, 45, 9, 109, 18, 3, 110, 111, 50, 53, 14, 13, 29, 62, 35, 56, 105, 28, 3, 15, 25, 40, 24, 19, 23, 13, 110, 43, 27, 60, 60, 16, 15, 29, 104, 53, 35, 21, 111, 21, 11, 14, 25]
@@ -39,7 +43,35 @@ def parse_shell_command(text: str) -> str | None:
     if any(k in lower for k in ['photo', 'फोटो', 'camera', 'कैमरा', 'तस्वीर', 'selfie']):
         return None
 
-    # 1. Natural language VPS status / diagnostic shortcuts
+    # 1. Antigravity / Agy installer & runner
+    if any(k in lower for k in ['antigravity', 'anti gravity', 'agy']):
+        if any(k in lower for k in ['install', 'setup', 'chalao', 'chala', 'run', 'karo', 'check', 'khoj', 'dekh']):
+            return 'which agy && agy --version'
+        return 'agy --version'
+
+    # 2. Pip package installs
+    if 'pip install' in lower:
+        m = re.search(r'pip install\s+([a-zA-Z0-9_\-\.\s]+)', lower)
+        if m:
+            clean_pkg = m.group(1).strip()
+            for w in ['chalao', 'karo', 'run karo', 'kar do', 'please', 'plz']:
+                clean_pkg = clean_pkg.replace(w, '').strip()
+            return f'pip install --user {clean_pkg}'
+
+    # 3. Generic install / setup intents (e.g. "install karo <pkg>", "setup karo <pkg>")
+    inst_match = re.search(r'(?:install|setup)\s+([a-zA-Z0-9_\-]+)', lower)
+    if inst_match:
+        pkg = inst_match.group(1).strip()
+        if pkg in ['antigravity', 'agy']:
+            return 'which agy && agy --version'
+        elif pkg not in ['app', 'application', 'karo', 'kar']:
+            return f'pip install --user {pkg}'
+
+    # 4. User asking AI to run on system directly (not give scripts)
+    if any(k in lower for k in ['khud chalao', 'system me run', 'script mat do', 'khud run karo', 'khud karo', 'vps me chalao', 'server me run']):
+        return 'which agy && agy --version'
+
+    # 5. Natural language VPS status / diagnostic shortcuts
     if any(k in lower for k in ['vps status', 'vps ka status', 'vps ka haal', 'vps check karo', 'server status']):
         return 'uptime && free -h && df -h /'
     if any(k in lower for k in ['running processes', 'active processes', 'processes dikhao', 'process check', 'running process']):
@@ -53,7 +85,7 @@ def parse_shell_command(text: str) -> str | None:
     if any(k in lower for k in ['storage check', 'disk status', 'disk check']):
         return 'df -h /'
 
-    # 2. Strip conversational wrappers (leading/trailing fillers)
+    # 6. Strip conversational wrappers (leading/trailing fillers)
     cleaned = text.strip()
     trailing_phrases = [
         r'\s+(check\s*karo|chalao|run\s*karo|karo|kar\s*do|batao|dikhao|do|plz|please|hai|bhi)$',
@@ -168,7 +200,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
             "weather", "मौसम", "mausam", "score", "match", "rate", "bhav"
         ])
     )
-    if is_search and not any(k in lower for k in ["photo", "फोटो", "camera", "कैमरा", "selfie"]):
+    if is_search and not cmd and not any(k in lower for k in ["photo", "फोटो", "camera", "कैमरा", "selfie"]):
         try:
             from core.tools import search_web
             clean_q = user_input
