@@ -1188,9 +1188,6 @@
       isSpeaking = false;
       if (isCallActive) setTimeout(startListeningTurn, 300);
     }
-      checkTurnFinished();
-      setTimeout(function(){ setStatus("READY", ""); }, 2000);
-    }
   }
 
   /* ---------- PERSISTENT CALL STREAM ENGINE (NO REPEATED PERMISSION, INSTANT ZERO-LATENCY) ---------- */
