@@ -76,11 +76,11 @@ HARDCODED_GROQ_MODEL = "qwen/qwen3.8-27b"
 
 def _prepare_user_input(user_input: str) -> str:
     """Detects system status, database queries, notes, network, and memory recall queries and attaches live context."""
-    lower = user_input.lower()
+    lower = user_input.lower().strip()
 
-    # 1. Turso Cloud Database Overview / Table Stats
-    db_keywords = ["database", "डेटाबेस", "tables", "टेबल", "db status", "कितने रिकॉर्ड", "photos count", "photo count", "कितनी फोटो", "डेटा", "db overview"]
-    if any(k in lower for k in db_keywords):
+    # 1. Turso Cloud Database Overview / Table Stats (deliberate query only)
+    db_triggers = ["database status", "database me kya", "db status", "kitni photos", "kitne records", "tables dikhao", "database check"]
+    if any(k in lower for k in db_triggers):
         try:
             from core.db import get_db_overview
             overview = get_db_overview()
@@ -111,9 +111,9 @@ def _prepare_user_input(user_input: str) -> str:
         except Exception as e:
             print(f"[Recall Notes Error] {e}")
 
-    # 4. Network & IP Telemetry
-    network_keywords = ["ip", "आईपी", "network", "नेटवर्क", "लोकेशन", "location", "isp", "इंटरनेट", "public ip"]
-    if any(k in lower for k in network_keywords):
+    # 4. Network & IP Telemetry (deliberate query only)
+    network_triggers = ["ip address", "ip kya hai", "public ip", "location kya hai", "network status", "isp kya hai"]
+    if any(k in lower for k in network_triggers):
         try:
             from core.tools import get_network_info
             net_info = get_network_info()
@@ -121,12 +121,12 @@ def _prepare_user_input(user_input: str) -> str:
         except Exception as e:
             print(f"[Network Telemetry Error] {e}")
 
-    # 5. Full System Telemetry (CPU, RAM, Disk, Uptime)
-    system_keywords = [
-        "system", "सिस्टम", "जांच", "स्टेटस", "status", "check", "चेक",
-        "ram", "रैम", "disk", "डिस्क", "storage", "स्टोरेज", "uptime", "हाल", "diagnostic", "cpu", "हार्डवेयर", "specs"
+    # 5. Full System Telemetry (CPU, RAM, Disk - deliberate query only)
+    system_triggers = [
+        "system status", "system specs", "hardware status", "सिस्टम स्थिति",
+        "ram kitni", "disk space", "cpu kitna", "storage kitni", "hardware specs"
     ]
-    if any(k in lower for k in system_keywords):
+    if any(k in lower for k in system_triggers):
         try:
             from core.tools import get_detailed_sysinfo
             status = get_detailed_sysinfo()
@@ -152,9 +152,9 @@ def _prepare_user_input(user_input: str) -> str:
         except Exception as e:
             print(f"[Shell Execution Error] {e}")
 
-    # 7. Conversation Memory Recall
-    memory_keywords = ["याद", "पिछल", "पहले क्या", "बात हुई", "history", "memory", "remember", "क्या कहा", "क्या बोला"]
-    if any(k in lower for k in memory_keywords) and not any(k in lower for k in note_save_keywords):
+    # 7. Conversation Memory Recall (deliberate query only)
+    memory_triggers = ["पहले क्या बोला था", "पिछली बात", "तुम्हें याद है क्या कहा", "what did i say before", "previous talk", "conversation history"]
+    if any(k in lower for k in memory_triggers):
         try:
             from core.db import get_recent_history
             recent_turns = get_recent_history(limit=8)
@@ -218,7 +218,7 @@ def get_ai_response(user_input: str, history: list = None) -> str:
         return f"माफ़ करना बॉस, समस्या आई: {str(e)}"
 
 def stream_ai_response(user_input: str, history: list = None):
-    """Streams response tokens from Groq in real time."""
+    """Streams response tokens from Groq in real time with sub-second latency."""
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip() or HARDCODED_GROQ_KEY
     model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
@@ -226,21 +226,13 @@ def stream_ai_response(user_input: str, history: list = None):
     user_input = _prepare_user_input(user_input)
 
     history_messages = []
-    if history and len(history) >= 2:
-        for msg in history[-8:]:
-            history_messages.append(msg)
-    else:
-        try:
-            from core.db import get_recent_history
-            db_history = get_recent_history(limit=8)
-            for msg in db_history:
-                if msg.get("content") != user_input:
-                    history_messages.append(msg)
-        except Exception as e:
-            pass
+    if history:
+        for msg in history[-6:]:
+            if msg.get("content") != user_input:
+                history_messages.append(msg)
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for msg in history_messages[-8:]:
+    for msg in history_messages[-6:]:
         messages.append(msg)
     messages.append({"role": "user", "content": user_input})
 
@@ -249,7 +241,7 @@ def stream_ai_response(user_input: str, history: list = None):
             model=model,
             messages=messages,
             temperature=0.6,
-            max_tokens=250,
+            max_tokens=100,
             stream=True
         )
         for chunk in completion:

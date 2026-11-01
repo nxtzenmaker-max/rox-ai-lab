@@ -59,25 +59,27 @@ async def health_check():
         "features": ["3D Avatar", "Deepgram Aura Voice", "Twilio Phone Agent", "Groq Brain"]
     }
 
+import threading
+
 @app.post("/api/chat")
 async def chat_endpoint(req: ChatRequest):
     print(f"[Chat Request] User message: '{req.message}'")
-    save_message("user", req.message)
+    threading.Thread(target=save_message, args=("user", req.message), daemon=True).start()
     reply = get_ai_response(req.message, req.history)
     print(f"[Chat Response] Reply: '{reply}'")
-    save_message("assistant", reply)
+    threading.Thread(target=save_message, args=("assistant", reply), daemon=True).start()
     return {"reply": reply}
 
 @app.post("/api/chat/stream")
 async def chat_stream_endpoint(req: ChatRequest):
-    save_message("user", req.message)
+    threading.Thread(target=save_message, args=("user", req.message), daemon=True).start()
     def event_generator():
         full_tokens = []
         for token in stream_ai_response(req.message, req.history):
             full_tokens.append(token)
             payload = json.dumps({"token": token}, ensure_ascii=False)
             yield f"data: {payload}\n\n"
-        save_message("assistant", "".join(full_tokens))
+        threading.Thread(target=save_message, args=("assistant", "".join(full_tokens)), daemon=True).start()
         yield "data: [DONE]\n\n"
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

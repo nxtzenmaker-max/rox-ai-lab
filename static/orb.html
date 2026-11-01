@@ -1050,7 +1050,10 @@
               var isClauseBreak = currentSentence.length >= 40 && /[,;]/.test(token);
               var isLongSentence = currentSentence.length >= 70 && /\s/.test(token);
 
-              if ((isEndPunctuation || isClauseBreak || isLongSentence) && currentSentence.trim().length >= 6) {
+              // Prevent micro-chunking pauses ("ruk-ruk ke bolna"):
+              // Minimum chunk size of 32 chars ensures every chunk has at least 2.5-3 seconds of speech buffer
+              // so the next chunk has plenty of time to download without any silence gaps!
+              if ((isEndPunctuation || isClauseBreak || isLongSentence) && currentSentence.trim().length >= 32) {
                 var chunk = currentSentence.trim();
                 currentSentence = "";
                 enqueueSentenceChunk(chunk);
@@ -1082,13 +1085,13 @@
       drainSequentialQueue(turnId);
       checkTurnFinished();
 
-      // Failsafe status watchdog: If still THINKING after 2.5 seconds, reset to READY
+      // Failsafe watchdog: If completely stuck in THINKING for 6 seconds without any chunks, reset to READY
       setTimeout(function() {
-        if (turnId === currentTurnId && !isSpeaking && activeSources.length === 0) {
+        if (turnId === currentTurnId && totalChunksCreated === 0 && !isSpeaking && activeSources.length === 0) {
           setStatus("READY", "");
           if (isCallActive) startListeningTurn();
         }
-      }, 2500);
+      }, 6000);
 
       chatHistory.push({ role: "assistant", content: fullReply });
 
@@ -1161,9 +1164,9 @@
       micProcessor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
       
       micProcessor.onaudioprocess = function(e){
-        // While Rox is speaking or not in listening turn, IGNORE mic input!
-        // This completely prevents speaker echo / background noise from cutting off Rox or saying huu!
-        if (!isCallActive || isSpeaking || !isListening) return;
+        // While Rox is speaking or audio is actively playing, IGNORE mic input!
+        // This completely prevents speaker echo / self-interruption / false stops!
+        if (!isCallActive || isSpeaking || activeSources.length > 0 || !isListening) return;
 
         var input = e.inputBuffer.getChannelData(0);
         var sum = 0;
@@ -1183,7 +1186,7 @@
         } else if (voiceDetected) {
           if (!silenceStartTime) {
             silenceStartTime = now;
-          } else if (now - silenceStartTime > 900) { // 900ms silence = Boss stopped speaking!
+          } else if (now - silenceStartTime > 380) { // 380ms silence = Boss stopped speaking (Instant <1s TTFT!)
             finishSpeechAndProcess();
           }
         } else {
