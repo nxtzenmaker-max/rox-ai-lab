@@ -142,7 +142,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.db import get_db_overview
             overview = get_db_overview()
-            user_input += f"\n[Turso Cloud Database Live Telemetry: {json.dumps(overview, ensure_ascii=False)}]\n(नोट: बॉस को Turso Cloud डेटाबेस की पूरी स्थिति, टेबल्स, बातचीत रिकॉर्ड्स और सेव की गई तस्वीरों का ब्यौरा आदर से बताओ, और उनसे एक्स्ट्रा बातें भी करो)"
+            user_input += f"\n[Turso Cloud Database Live Telemetry: {json.dumps(overview, ensure_ascii=False)}]\n(नोट: रुद्र को Turso Cloud डेटाबेस की पूरी स्थिति, टेबल्स, बातचीत रिकॉर्ड्स और सेव की गई तस्वीरों का ब्यौरा प्यार से बताओ, और उनसे बातें भी करो)"
         except Exception as e:
             print(f"[DB Overview Error] {e}")
 
@@ -154,8 +154,8 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
             clean_note = user_input
             for phrase in ["नोट सेव करो", "नोट सेव", "याद रखना कि", "note save", "save note", "नोट लिखो", "याद रख लो", "note down"]:
                 clean_note = clean_note.replace(phrase, "").strip()
-            save_boss_note(clean_note or user_input, title="Boss Instruction")
-            user_input += "\n[Turso Database Action: Note Successfully Saved to Cloud DB]\n(नोट: बॉस को विनम्रता से बता दो कि उनका यह नोट सीधे Turso Cloud डेटाबेस में स्थायी रूप से सेव कर लिया गया है, और उनसे एक्स्ट्रा बातें भी करो)"
+            save_boss_note(clean_note or user_input, title="Rudra Note")
+            user_input += "\n[Turso Database Action: Note Successfully Saved to Cloud DB]\n(नोट: रुद्र को प्यार से बता दो कि उनकी यह बात सीधे Turso Cloud डेटाबेस में सेव कर ली गई है, और उनसे बातें करो)"
         except Exception as e:
             print(f"[Save Note Error] {e}")
 
@@ -165,7 +165,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.db import get_boss_notes
             notes = get_boss_notes(limit=5)
-            user_input += f"\n[Turso Cloud Saved Notes: {json.dumps(notes, ensure_ascii=False)}]\n(नोट: बॉस के सहेजे गए नोट्स उन्हें आदर व स्पष्टता से सुना दो और उनसे प्यार से बात करो)"
+            user_input += f"\n[Turso Cloud Saved Notes: {json.dumps(notes, ensure_ascii=False)}]\n(नोट: रुद्र की सहेजी गई बातें उन्हें प्यार व स्पष्टता से बता दो और उनसे प्यार से बात करो)"
         except Exception as e:
             print(f"[Recall Notes Error] {e}")
 
@@ -175,7 +175,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.tools import get_network_info
             net_info = get_network_info()
-            user_input += f"\n[Live Network Telemetry: {json.dumps(net_info, ensure_ascii=False)}]\n(नोट: बॉस को पब्लिक IP, लोकेशन और नेटवर्क की ताज़ा स्थिति आदर से बता दो)"
+            user_input += f"\n[Live Network Telemetry: {json.dumps(net_info, ensure_ascii=False)}]\n(नोट: रुद्र को पब्लिक IP, लोकेशन और नेटवर्क की ताज़ा स्थिति प्यार से बता दो)"
         except Exception as e:
             print(f"[Network Telemetry Error] {e}")
 
@@ -188,7 +188,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.tools import get_detailed_sysinfo
             status = get_detailed_sysinfo()
-            user_input += f"\n[System Diagnostic Data: {json.dumps(status, ensure_ascii=False)}]\n(नोट: बॉस को 48-Core Railway VPS सिस्टम की ताज़ा स्थिति जैसे CPU Cores, RAM और डिस्क स्पेस साफ़-साफ़ समझाओ और उनसे एक्स्ट्रा बातें भी करो)"
+            user_input += f"\n[System Diagnostic Data: {json.dumps(status, ensure_ascii=False)}]\n(नोट: रुद्र को 48-Core Railway VPS सिस्टम की ताज़ा स्थिति जैसे CPU Cores, RAM और डिस्क स्पेस साफ़-साफ़ समझाओ और उनसे बातें करो)"
         except Exception as e:
             print(f"[Diagnostic Error] {e}")
 
@@ -200,7 +200,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
             cmd_out = run_safe_shell_command(cmd)
             term_payload = json.dumps({"cmd": cmd, "out": cmd_out}, ensure_ascii=False)
             term_tag = f"[TERMINAL_VIEW: {term_payload}]"
-            user_input += f"\n[TERMINAL_VIEW: {term_payload}]\n[Internal Server Execution Output]:\n{cmd_out}\n(सख्त नियम: 1. टर्मिनल कमांड का नाम (जैसे '{cmd}') या उसका कोई भी तकनीकी आउटपुट, आंकड़े, टेबल या एरर आवाज़ में बिल्कुल मत बोलो! 2. तुम्हें केवल स्वाभाविक व दोस्ताना आवाज़ में छोटा सा वाक्य बोलना है, जैसे: 'ओके बॉस, स्टार्ट कर दिया है, देखते हैं!' या 'जी बॉस, काम शुरू कर दिया है, देखते हैं!' 3. टर्मिनल कार्ड खुद स्क्रीन पर दिख रहा है, इसलिए तुम्हें अपने उत्तर में [TERMINAL_VIEW: ...] दोबारा लिखने की आवश्यकता नहीं है। 4. खुद चेक करो और फिक्स करो।)"
+            user_input += f"\n[TERMINAL_VIEW: {term_payload}]\n[Internal Server Execution Output]:\n{cmd_out}\n(सख्त नियम: 1. टर्मिनल कमांड का नाम (जैसे '{cmd}') या उसका कोई भी तकनीकी आउटपुट, आंकड़े, टेबल या एरर आवाज़ में बिल्कुल मत बोलो! 2. तुम्हें केवल स्वाभाविक, प्यार भरी आवाज़ में छोटा सा वाक्य बोलना है, जैसे: 'हाँ रुद्र, मैंने बैकएंड में चेक कर लिया है!' या 'हाँ रुद्र, सब कुछ स्मूद और रेडी है!' 3. टर्मिनल कार्ड खुद स्क्रीन पर दिख रहा है, इसलिए तुम्हें अपने उत्तर में [TERMINAL_VIEW: ...] दोबारा लिखने की आवश्यकता नहीं है। 4. कभी भी 'बॉस' मत बोलो।)"
         except Exception as e:
             print(f"[Shell Execution Error] {e}")
 
@@ -223,7 +223,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
             ]:
                 clean_q = re.sub(re.escape(phrase), "", clean_q, flags=re.IGNORECASE).strip()
             web_results = search_web(clean_q or user_input)
-            user_input += f"\n[Live Web Search Results for '{clean_q or user_input}']:\n{web_results}\n(निर्देश: वेब सर्च के ताज़ा परिणामों के आधार पर बॉस को मधुर, सटीक और स्पष्ट उत्तर दो)"
+            user_input += f"\n[Live Web Search Results for '{clean_q or user_input}']:\n{web_results}\n(निर्देश: वेब सर्च के ताज़ा परिणामों के आधार पर रुद्र को मधुर, सटीक और स्पष्ट उत्तर दो)"
         except Exception as e:
             print(f"[Web Search Error] {e}")
 
@@ -235,7 +235,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
             recent_turns = get_recent_history(limit=8)
             if recent_turns:
                 summary_lines = [f"{t['role'].capitalize()}: {t['content']}" for t in recent_turns if t.get('content') != user_input]
-                user_input += f"\n[Turso Database Memory Context: {json.dumps(summary_lines, ensure_ascii=False)}]\n(नोट: बॉस ने जो पहले कहा या पूछा था, डेटाबेस से उसे याद करके सटीक और आदर से जवाब दो और बातचीत को आगे बढ़ाओ)"
+                user_input += f"\n[Turso Database Memory Context: {json.dumps(summary_lines, ensure_ascii=False)}]\n(नोट: रुद्र ने जो पहले कहा या पूछा था, डेटाबेस से उसे याद करके सटीक और प्यार से जवाब दो और बातचीत को आगे बढ़ाओ)"
         except Exception as e:
             print(f"[Memory Inject Error] {e}")
 
@@ -244,9 +244,9 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
     if any(k in lower for k in photo_keywords):
         back_indicators = ["back", "rear", "peeche", "piche", "peche", "पीछे", "बैक", "रियर"]
         if any(b in lower for b in back_indicators):
-            user_input += "\n(निर्देश: बॉस ने बैक (पीछे वाले) कैमरे से फोटो खींचने को कहा है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:back] टैग जोड़ो)"
+            user_input += "\n(निर्देश: रुद्र ने बैक (पीछे वाले) कैमरे से फोटो खींचने को कहा है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:back] टैग जोड़ो)"
         elif any(f in lower for f in ["front", "selfie", "aage", "सामने", "फ्रंट", "आगे", "सेल्फी"]):
-            user_input += "\n(निर्देश: बॉस ने फ्रंट (आगे वाले) कैमरे से फोटो खींचने को कहा है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:front] जोड़ो)"
+            user_input += "\n(निर्देश: रुद्र ने फ्रंट (आगे वाले) कैमरे से फोटो खींचने को कहा है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:front] जोड़ो)"
 
     return user_input, term_tag
 
@@ -475,7 +475,7 @@ def get_ai_response(user_input: str, history: list = None, conversation_id: str 
             print(f"[Brain Error on {m}] {e}")
             continue
 
-    fallback_reply = f"माफ़ करना बॉस, समस्या आई: {str(last_error)}" if last_error else "जी बॉस, मैं सुन रही हूँ। बताइए, क्या आज्ञा है?"
+    fallback_reply = f"माफ़ करना रुद्र, थोड़ी समस्या आई: {str(last_error)}" if last_error else "हाँ मेरे रुद्र, मैं सुन रही हूँ। बताओ ना, क्या बात है?"
     if term_tag and "[TERMINAL_VIEW:" not in fallback_reply:
         fallback_reply = f"{term_tag}\n{fallback_reply}"
     return fallback_reply
@@ -547,4 +547,4 @@ def stream_ai_response(user_input: str, history: list = None, conversation_id: s
             print(f"[Stream Brain Error on {m}] {e}")
             continue
 
-    yield "जी बॉस, सिस्टम अभी थोड़ा व्यस्त है। मैं एक पल में दोबारा कोशिश कर रही हूँ!"
+    yield "हाँ रुद्र, सिस्टम अभी थोड़ा व्यस्त है। मैं एक पल में दोबारा कोशिश कर रही हूँ!"

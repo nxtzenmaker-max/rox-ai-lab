@@ -549,7 +549,7 @@
     </div>
     <img id="photoPreview" class="photo-img" src="" alt="Captured Photo" />
     <div class="photo-actions">
-      <a id="photoDownloadBtn" class="photo-btn" download="boss-captured.jpg">💾 DOWNLOAD</a>
+      <a id="photoDownloadBtn" class="photo-btn" download="rudra-captured.jpg">💾 DOWNLOAD</a>
       <button class="photo-btn secondary" onclick="closePhotoModal()">DONE</button>
     </div>
   </div>
@@ -1208,7 +1208,7 @@
           if (dlBtn) dlBtn.href = dataUrl;
           modal.style.display = 'flex';
         }
-        setStatus("PHOTO CAPTURED, BOSS!", "speaking");
+        setStatus("PHOTO CAPTURED, RUDRA!", "speaking");
 
         // Immediately release camera stream so phone's green privacy indicator turns off
         if (cameraStream) {
@@ -1467,7 +1467,10 @@
       .replace(/\s+/g, ' ')
       .trim();
 
+    // Discard empty, single-character, raw base64 or programming code chunks
     if (!clean || clean.length < 2) return;
+    if (/^[A-Za-z0-9+/=]{25,}$/.test(clean)) return;
+    if (/^(def |import |from |class |const |let |var |function |return )/.test(clean)) return;
 
     // Enforce max speech length per chunk (150 chars) to prevent 429 concurrency limit
     if (clean.length > 150) {
@@ -1535,31 +1538,48 @@
   }
 
   async function fetchTTSChunk(text, index, turnId) {
+    var ttsAbort = new AbortController();
+    var ttsTimer = setTimeout(function() {
+      try { ttsAbort.abort(); } catch(e){}
+    }, 7000); // 7s hard timeout so TTS requests never hang indefinitely
+
     try {
       ensureAudioCtx();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
       // Slight stagger between chunk requests to avoid Deepgram 429 concurrency limit
       if (index > 0) {
         await new Promise(function(r) { setTimeout(r, Math.min(index * 60, 240)); });
       }
+
+      if (turnId !== currentTurnId) {
+        clearTimeout(ttsTimer);
+        return;
+      }
+
       var ttsUrl = (vpsVoiceUrl ? vpsVoiceUrl : '') + '/api/tts';
       var resp;
       try {
         resp = await fetch(ttsUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text })
+          body: JSON.stringify({ text: text }),
+          signal: ttsAbort.signal
         });
       } catch(netErr) {
         if (ttsUrl !== '/api/tts') {
           resp = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: text })
+            body: JSON.stringify({ text: text }),
+            signal: ttsAbort.signal
           });
         } else {
           throw netErr;
         }
       }
+      clearTimeout(ttsTimer);
 
       if (turnId !== currentTurnId) return;
 
@@ -1576,7 +1596,8 @@
 
       handleChunkDecoded(index, audioBuf, turnId);
     } catch(err) {
-      console.warn("TTS Chunk fetch error:", err);
+      clearTimeout(ttsTimer);
+      console.warn("TTS Chunk fetch error or timeout:", err);
       if (turnId === currentTurnId) {
         handleChunkDecoded(index, null, turnId);
       }
@@ -1609,6 +1630,9 @@
 
   function scheduleAudioBuffer(buffer) {
     ensureAudioCtx();
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
     isSpeaking = true;
     setStatus("SPEAKING...", "speaking");
     glow = 0.8;
@@ -1625,25 +1649,33 @@
 
     activeSources.push(source);
 
-    source.onended = function() {
+    var hasEnded = false;
+    function onSourceEnded() {
+      if (hasEnded) return;
+      hasEnded = true;
       var idx = activeSources.indexOf(source);
       if (idx > -1) activeSources.splice(idx, 1);
       checkTurnFinished();
-    };
+    }
+
+    source.onended = onSourceEnded;
+    // Guaranteed fallback timer in case browser drops onended event
+    setTimeout(onSourceEnded, Math.max(800, (buffer.duration + 0.5) * 1000));
   }
 
   function checkTurnFinished() {
     // A turn is truly finished only when:
-    // 1. Text stream from Groq is finished
+    // 1. Text stream from Groq/Antigravity is finished
     // 2. All chunks have been scheduled
     // 3. All audio playback sources have finished playing
     if (isStreamingDone && nextScheduleIndex >= totalChunksCreated && activeSources.length === 0) {
       isSpeaking = false;
-      setStatus("READY", "");
       glow = 0.0;
       setEmotion("neutral");
       if (isCallActive) {
-        setTimeout(startListeningTurn, 200);
+        setTimeout(startListeningTurn, 250);
+      } else {
+        setStatus("READY", "");
       }
     }
   }
@@ -1737,10 +1769,26 @@
                 activeConversationId = parsed.conversation_id;
                 try { localStorage.setItem('rox_conv_id', activeConversationId); } catch(e){}
               }
+
+              // Direct handling of isolated terminal payload from SSE stream
+              if (parsed.terminal_b64 && !terminalTriggered) {
+                terminalTriggered = true;
+                try {
+                  var rawJson = decodeURIComponent(escape(atob(parsed.terminal_b64)));
+                  var termData = JSON.parse(rawJson);
+                  if (termData.cmd) showTerminalHud(termData.cmd, termData.out || "");
+                } catch(e) {
+                  try {
+                    var termData2 = JSON.parse(atob(parsed.terminal_b64));
+                    if (termData2.cmd) showTerminalHud(termData2.cmd, termData2.out || "");
+                  } catch(e2) {}
+                }
+              }
+
               var token = parsed.token || "";
               fullReply += token;
 
-              // Check for base64-encoded terminal view
+              // Check for base64-encoded terminal view embedded in fullReply
               var b64Match = fullReply.match(/\[TERMINAL_VIEW_B64:([A-Za-z0-9+/=]+)\]/);
               if (!terminalTriggered && b64Match) {
                 terminalTriggered = true;
@@ -1750,7 +1798,12 @@
                   if (termData.cmd) {
                     showTerminalHud(termData.cmd, termData.out || "");
                   }
-                } catch(e) {}
+                } catch(e) {
+                  try {
+                    var termData2 = JSON.parse(atob(b64Match[1]));
+                    if (termData2.cmd) showTerminalHud(termData2.cmd, termData2.out || "");
+                  } catch(e2) {}
+                }
               }
 
               // Fallback for legacy terminal view
@@ -1765,8 +1818,10 @@
                 } catch(e) {}
               }
 
-              // Strip terminal tags from token before appending to currentSentence
-              var cleanToken = token.replace(/\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)/gi, '');
+              // Clean token of terminal tags and action tags before appending to speech sentence
+              var cleanToken = token
+                .replace(/\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)/gi, '')
+                .replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '');
               if (cleanToken) {
                 currentSentence += cleanToken;
               }
@@ -1779,10 +1834,11 @@
               var cleanSubtitle = fullReply
                 .replace(/\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)/gi, '')
                 .replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '')
+                .replace(/```[\s\S]*?```/gi, '')
                 .trim();
-              setSubtitle("ROX", cleanSubtitle, emo);
+              setSubtitle("RJN", cleanSubtitle, emo);
 
-              // Trigger photo capture command (front vs back) if requested by Boss
+              // Trigger photo capture command (front vs back) if requested by Rudra
               var facingMatch = fullReply.match(/\[ACTION:\s*CAPTURE_PHOTO(?::(front|back))?\s*\]/i);
               if (!actionTriggered && facingMatch) {
                 actionTriggered = true;
@@ -1798,12 +1854,12 @@
                 capturePhotoAction(facing);
               }
 
-              // High-quality sentence boundary detection
+              // High-quality sentence boundary detection for Devanagari Hindi
               var isEndPunctuation = /[।\.?!\n]/.test(token);
-              var isClauseBreak = currentSentence.length >= 40 && /[,;]/.test(token);
-              var isLongSentence = currentSentence.length >= 70 && /\s/.test(token);
+              var isClauseBreak = currentSentence.length >= 35 && /[,;]/.test(token);
+              var isLongSentence = currentSentence.length >= 65 && /\s/.test(token);
 
-              if ((isEndPunctuation || isClauseBreak || isLongSentence) && currentSentence.trim().length >= 32) {
+              if ((isEndPunctuation || isClauseBreak || isLongSentence) && currentSentence.trim().length >= 25) {
                 var chunk = currentSentence.trim();
                 currentSentence = "";
                 enqueueSentenceChunk(chunk);
@@ -1853,6 +1909,27 @@
       isStreamingDone = true;
       drainSequentialQueue(turnId);
       checkTurnFinished();
+
+      // If no audio chunks were created, instantly return to READY or LISTENING
+      if (totalChunksCreated === 0) {
+        isSpeaking = false;
+        glow = 0.0;
+        if (isCallActive) setTimeout(startListeningTurn, 250);
+        else setStatus("READY", "");
+      } else {
+        // Robust Watchdog: If any TTS chunk or playback hangs, force-recover to READY / LISTENING
+        var maxTurnWait = Math.min(25000, Math.max(7000, totalChunksCreated * 4500));
+        setTimeout(function() {
+          if (turnId === currentTurnId && (isSpeaking || activeSources.length > 0 || statusLabel.innerText === "THINKING")) {
+            console.warn("[Watchdog] Turn completion timed out, force resetting to READY/LISTENING");
+            stopAllSpeechAudio();
+            isSpeaking = false;
+            glow = 0.0;
+            if (isCallActive) setTimeout(startListeningTurn, 250);
+            else setStatus("READY", "");
+          }
+        }, maxTurnWait);
+      }
 
       chatHistory.push({ role: "assistant", content: fullReply });
 
@@ -1989,7 +2066,7 @@
       micProcessor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
       
       micProcessor.onaudioprocess = function(e){
-        // While Rox is speaking or audio is actively playing, IGNORE mic input!
+        // While RJN is speaking, audio is actively playing, or not in listening turn, IGNORE mic input!
         // This completely prevents speaker echo / self-interruption / false stops!
         if (!isCallActive || isSpeaking || activeSources.length > 0 || !isListening) return;
 
@@ -2004,26 +2081,34 @@
         pcmBuffers.push(new Float32Array(input));
 
         // Real-time Energy / RMS calculation for VAD (clean voice threshold)
-        if (rms > 0.02) {
+        if (rms > 0.025) {
           voiceDetected = true;
           silenceStartTime = null;
           setStatus("LISTENING... (SPEAKING)", "listening");
         } else if (voiceDetected) {
           if (!silenceStartTime) {
             silenceStartTime = now;
-          } else if (now - silenceStartTime > 380) { // 380ms silence = Boss stopped speaking (Instant <1s TTFT!)
+          } else if (now - silenceStartTime > 750) { // 750ms natural silence = Rudra finished speaking
             finishSpeechAndProcess();
           }
         } else {
-          // Keep buffer clean if silent for long time
-          if (pcmBuffers.length > 50) {
-            pcmBuffers.splice(0, 15);
+          // Keep buffer bounded while waiting
+          if (pcmBuffers.length > 40) {
+            pcmBuffers.splice(0, 10);
           }
         }
       };
 
       micSource.connect(micProcessor);
-      micProcessor.connect(analyser);
+      // Connect to dummy zero-gain destination node so Chromium/WebKit never halts the processor
+      try {
+        var dummyGain = audioCtx.createGain();
+        dummyGain.gain.value = 0.0;
+        micProcessor.connect(dummyGain);
+        dummyGain.connect(audioCtx.destination);
+      } catch(e) {
+        micProcessor.connect(analyser);
+      }
       return true;
 
     } catch(err) {
@@ -2034,7 +2119,12 @@
   }
 
   function startListeningTurn() {
-    if (!isCallActive || isSpeaking) return;
+    if (!isCallActive) return;
+    if (isSpeaking || activeSources.length > 0) return;
+    ensureAudioCtx();
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
     pcmBuffers = [];
     voiceDetected = false;
     silenceStartTime = null;
@@ -2048,16 +2138,19 @@
     if (!isListening) return;
     isListening = false;
     setStatus("THINKING...", "thinking");
+    glow = 0.4;
 
     var totalLength = 0;
     for (var i = 0; i < pcmBuffers.length; i++) {
       totalLength += pcmBuffers[i].length;
     }
 
-    if (!voiceDetected || totalLength < 3500) {
+    if (!voiceDetected || totalLength < 4000) {
       pcmBuffers = [];
       if (isCallActive) {
-        setTimeout(startListeningTurn, 200);
+        setTimeout(startListeningTurn, 250);
+      } else {
+        setStatus("READY", "");
       }
       return;
     }
@@ -2099,7 +2192,7 @@
         sendToGroq(transcript);
       } else {
         if (isCallActive) {
-          setTimeout(startListeningTurn, 200);
+          setTimeout(startListeningTurn, 250);
         } else {
           setStatus("READY", "");
         }
@@ -2107,7 +2200,7 @@
     } catch(err) {
       console.error("Transcribe error:", err);
       if (isCallActive) {
-        setTimeout(startListeningTurn, 300);
+        setTimeout(startListeningTurn, 350);
       } else {
         setStatus("READY", "");
       }
@@ -2115,6 +2208,11 @@
   }
 
   async function toggleCall() {
+    ensureAudioCtx();
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
     if (isCallActive) {
       // End call
       isCallActive = false;
@@ -2127,7 +2225,7 @@
         micStream = null;
         micSource = null;
       }
-      setTimeout(function(){ setStatus("READY", ""); }, 1500);
+      setTimeout(function(){ setStatus("READY", ""); }, 1200);
     } else {
       // Start call (requests mic ONCE and stays open)
       var ok = await initCallAudioStream();

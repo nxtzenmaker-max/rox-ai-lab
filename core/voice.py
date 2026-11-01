@@ -63,7 +63,7 @@ async def generate_speech(text: str, audio_format: str = "mp3") -> bytes:
     """
     clean_text = sanitize_speech_text(text)
     if not clean_text:
-        clean_text = "जी बॉस!"
+        clean_text = "हाँ रुद्र!"
 
     api_key = os.getenv("DEEPGRAM_API_KEY", "").strip() or HARDCODED_DEEPGRAM_KEY
     if api_key:
