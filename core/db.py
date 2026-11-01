@@ -43,6 +43,13 @@ def execute_query(sql: str, params: list = None):
     Executes a query either on Turso Cloud via HTTP pipeline or on local SQLite.
     Zero-config and 100% resilient on Vercel Serverless.
     """
+    return execute_sql(sql, params)
+
+def execute_sql(sql: str, params: list = None) -> dict:
+    """
+    Executes raw SQL on Turso Cloud Database via HTTP Pipeline or local SQLite.
+    Returns structured results with columns, rows (as dicts), count, and affected_row_count.
+    """
     params = params or []
     if is_turso_configured():
         try:
@@ -51,7 +58,6 @@ def execute_query(sql: str, params: list = None):
                 "Authorization": f"Bearer {TURSO_AUTH_TOKEN}",
                 "Content-Type": "application/json"
             }
-            # Turso Pipeline format
             body = {
                 "requests": [
                     {
@@ -66,7 +72,24 @@ def execute_query(sql: str, params: list = None):
             }
             res = requests.post(http_url, headers=headers, json=body, timeout=5)
             if res.status_code == 200:
-                return {"status": "success", "engine": "turso_cloud"}
+                data = res.json()
+                result = data.get("results", [{}])[0].get("response", {}).get("result", {})
+                cols = [c.get("name") for c in result.get("cols", [])]
+                rows = []
+                for r in result.get("rows", []):
+                    row_dict = {}
+                    for i, val in enumerate(r):
+                        col_name = cols[i] if i < len(cols) else f"col_{i}"
+                        row_dict[col_name] = val.get("value")
+                    rows.append(row_dict)
+                return {
+                    "status": "success",
+                    "engine": "turso_cloud",
+                    "cols": cols,
+                    "rows": rows,
+                    "count": len(rows),
+                    "affected": result.get("affected_row_count", 0)
+                }
         except Exception as e:
             print(f"[Turso DB Error] {e}. Falling back to SQLite.")
 
@@ -76,16 +99,25 @@ def execute_query(sql: str, params: list = None):
         cur = conn.cursor()
         cur.execute(sql, params)
         conn.commit()
-        rows = cur.fetchall()
+        raw_rows = cur.fetchall()
+        cols = [col[0] for col in cur.description] if cur.description else []
+        rows = [dict(r) for r in raw_rows]
         conn.close()
-        return {"status": "success", "engine": "sqlite_local", "rows": rows}
+        return {
+            "status": "success",
+            "engine": "sqlite_local",
+            "cols": cols,
+            "rows": rows,
+            "count": len(rows),
+            "affected": cur.rowcount
+        }
     except Exception as e:
         print(f"[SQLite Error] {e}")
-        return {"status": "error", "error": str(e)}
+        return {"status": "error", "error": str(e), "cols": [], "rows": [], "count": 0}
 
 def init_db():
-    """Initializes tables for conversation history and photo logging."""
-    execute_query("""
+    """Initializes tables for conversation history, photos, and boss notes."""
+    execute_sql("""
     CREATE TABLE IF NOT EXISTS conversation_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         role TEXT NOT NULL,
@@ -93,13 +125,76 @@ def init_db():
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
-    execute_query("""
+    execute_sql("""
     CREATE TABLE IF NOT EXISTS captured_photos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         facing TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
+    execute_sql("""
+    CREATE TABLE IF NOT EXISTS boss_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        content TEXT NOT NULL,
+        category TEXT DEFAULT 'general',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+def get_db_overview() -> dict:
+    """
+    Returns full telemetry and status of Turso Cloud Database:
+    - Tables list
+    - Total conversation turns
+    - Total captured photos (front vs back)
+    - Total saved notes
+    """
+    try:
+        tables_res = execute_sql("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = [t.get("name") for t in tables_res.get("rows", [])]
+
+        history_res = execute_sql("SELECT COUNT(*) as total FROM conversation_history;")
+        total_history = history_res.get("rows", [{}])[0].get("total", 0)
+
+        photo_res = execute_sql("SELECT COUNT(*) as total FROM captured_photos;")
+        total_photos = photo_res.get("rows", [{}])[0].get("total", 0)
+
+        notes_res = execute_sql("SELECT COUNT(*) as total FROM boss_notes;")
+        total_notes = notes_res.get("rows", [{}])[0].get("total", 0)
+
+        recent_notes_res = execute_sql("SELECT id, title, content, created_at FROM boss_notes ORDER BY id DESC LIMIT 3;")
+
+        return {
+            "status": "online",
+            "database_engine": tables_res.get("engine", "turso_cloud"),
+            "database_url": "libsql://raj-nandni-dil-ai-rajnandani-op.aws-ap-south-1.turso.io",
+            "tables": tables,
+            "total_conversations": total_history,
+            "total_captured_photos": total_photos,
+            "total_boss_notes": total_notes,
+            "recent_notes": recent_notes_res.get("rows", [])
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+def save_boss_note(content: str, title: str = "Boss Note", category: str = "general") -> dict:
+    """Saves a note, reminder, or instruction from Boss into Turso Database."""
+    return execute_sql(
+        "INSERT INTO boss_notes (title, content, category) VALUES (?, ?, ?);",
+        [title, content, category]
+    )
+
+def get_boss_notes(limit: int = 5) -> list:
+    """Retrieves recent saved notes for Boss."""
+    res = execute_sql(
+        f"SELECT id, title, content, created_at FROM boss_notes ORDER BY id DESC LIMIT {limit};"
+    )
+    return res.get("rows", [])
+
+def delete_boss_note(note_id: int) -> dict:
+    """Deletes a note by ID."""
+    return execute_sql("DELETE FROM boss_notes WHERE id = ?;", [note_id])
 
 def save_message(role: str, message: str):
     """Saves a conversation turn to Turso / SQLite database."""

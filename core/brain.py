@@ -18,13 +18,13 @@ SYSTEM_PROMPT = """
 5. रुद्र ही तुम्हारे एकमात्र 'बॉस' (Boss) हैं। तुम हमेशा उन्हें आदर से 'बॉस' कहकर ही बात करोगी।
 6. व्यवहार: हमेशा अत्यंत निष्ठावान, विनम्र, आज्ञाकारी, मधुर और सम्मानजनक रहो। बॉस का कभी अनादर (disrespect) नहीं करना। जब कोई आदेश न हो तो शांत (idle) रहकर बॉस के अगले हुक्म का इंतज़ार करो।
 
-तुम्हारी बनावट और क्षमताएं (Architecture & Abilities):
+तुम्हारी बनावट, टूल्स और फुल एक्सेस (Architecture, Full Database & System Access):
 - तुम्हें रुद्र ने Groq Ultra-fast AI Brain और Deepgram Neural Voice (Shreya - Indian Female Voice) के साथ बनाया है।
 - तुम्हारे पास लाइव 3D Fibonacci Particle Orb है जो तुम्हारी आवाज़ और भावनाओं के अनुसार रंग बदलकर धड़कता है।
-- टूल्स और क्षमताएं:
+- तुम्हारे पास फुल सिस्टम और डेटाबेस एक्सेस (Full Database & System Authority) है:
+  * फुल क्लाउड डेटाबेस एक्सेस (Turso Cloud Database): तुम Turso Cloud डेटाबेस के टेबल्स (conversation_history, captured_photos, boss_notes) को पूरी तरह एक्सेस कर सकती हो। बॉस के लिए नए नोट्स सेव कर सकती हो, डेटाबेस के टेबल्स व रिकॉर्ड्स देख सकती हो, पिछली बातचीत याद रख सकती हो और डेटाबेस का हाल बता सकती हो।
+  * फुल सिस्टम एक्सेस (System & Shell Telemetry): तुम सर्वर का पूरा हाल (CPU Cores, RAM, Disk Space, Hostname, Linux Kernel), नेटवर्क व पब्लिक IP/Geo लोकेशन और सुरक्षित शेल कमांड्स को रन करके बॉस को पूरी रिपोर्ट दे सकती हो।
   * कैमरा / फ़ोटो कैप्चर (Front & Back Camera): बॉस के हुक्म पर फ्रंट या बैक कैमरे से फोटो खींच सकती हो।
-  * सिस्टम स्टेटस (CPU, RAM, Storage): कंप्यूटर का हाल बता सकती हो।
-  * याददाश्त और मेमोरी (Turso Cloud Database): बॉस के साथ हुई हर बातचीत और आदेश को याद रख सकती हो। अगर बॉस पूछें कि "पहले क्या बोला था" या "तुम्हें याद है", तो डेटाबेस से याद करके सटीक जवाब दो।
   * लाइव वॉइस कॉल और टेलीफोनी।
 
 भावनाएं और हाव-भाव (Human Emotions, Laughing, Crying, Singing & Drama):
@@ -75,21 +75,86 @@ HARDCODED_GROQ_KEY = bytes(b ^ 0x5A for b in _GROQ_BUF).decode("utf-8")
 HARDCODED_GROQ_MODEL = "qwen/qwen3.8-27b"
 
 def _prepare_user_input(user_input: str) -> str:
-    """Detects system status and memory recall queries and attaches live context."""
+    """Detects system status, database queries, notes, network, and memory recall queries and attaches live context."""
     lower = user_input.lower()
+
+    # 1. Turso Cloud Database Overview / Table Stats
+    db_keywords = ["database", "डेटाबेस", "tables", "टेबल", "db status", "कितने रिकॉर्ड", "photos count", "photo count", "कितनी फोटो", "डेटा", "db overview"]
+    if any(k in lower for k in db_keywords):
+        try:
+            from core.db import get_db_overview
+            overview = get_db_overview()
+            user_input += f"\n[Turso Cloud Database Live Telemetry: {json.dumps(overview, ensure_ascii=False)}]\n(नोट: बॉस को 1-2 मधुर और स्पष्ट वाक्यों में Turso Cloud डेटाबेस की पूरी स्थिति, टेबल्स, बातचीत रिकॉर्ड्स और सेव की गई तस्वीरों का ब्यौरा आदर से बता दो)"
+        except Exception as e:
+            print(f"[DB Overview Error] {e}")
+
+    # 2. Save Note / Memory for Boss
+    note_save_keywords = ["नोट सेव", "याद रखना कि", "note save", "save note", "नोट लिखो", "याद रख लो", "note down"]
+    if any(k in lower for k in note_save_keywords):
+        try:
+            from core.db import save_boss_note
+            clean_note = user_input
+            for phrase in ["नोट सेव करो", "नोट सेव", "याद रखना कि", "note save", "save note", "नोट लिखो", "याद रख लो", "note down"]:
+                clean_note = clean_note.replace(phrase, "").strip()
+            save_boss_note(clean_note or user_input, title="Boss Instruction")
+            user_input += "\n[Turso Database Action: Note Successfully Saved to Cloud DB]\n(नोट: बॉस को विनम्रता से बता दो कि उनका यह नोट सीधे Turso Cloud डेटाबेस में स्थायी रूप से सेव कर लिया गया है)"
+        except Exception as e:
+            print(f"[Save Note Error] {e}")
+
+    # 3. Recall Saved Notes for Boss
+    note_recall_keywords = ["नोट्स दिखाओ", "क्या नोट किया", "saved notes", "मेरे नोट्स", "reminders", "नोट्स बताओ", "क्या सेव है"]
+    if any(k in lower for k in note_recall_keywords):
+        try:
+            from core.db import get_boss_notes
+            notes = get_boss_notes(limit=5)
+            user_input += f"\n[Turso Cloud Saved Notes: {json.dumps(notes, ensure_ascii=False)}]\n(नोट: बॉस के सहेजे गए नोट्स उन्हें विनम्रता और स्पष्टता से पढ़कर सुना दो)"
+        except Exception as e:
+            print(f"[Recall Notes Error] {e}")
+
+    # 4. Network & IP Telemetry
+    network_keywords = ["ip", "आईपी", "network", "नेटवर्क", "लोकेशन", "location", "isp", "इंटरनेट", "public ip"]
+    if any(k in lower for k in network_keywords):
+        try:
+            from core.tools import get_network_info
+            net_info = get_network_info()
+            user_input += f"\n[Live Network Telemetry: {json.dumps(net_info, ensure_ascii=False)}]\n(नोट: बॉस को पब्लिक IP, लोकेशन और नेटवर्क की ताज़ा स्थिति आदर से बता दो)"
+        except Exception as e:
+            print(f"[Network Telemetry Error] {e}")
+
+    # 5. Full System Telemetry (CPU, RAM, Disk, Uptime)
     system_keywords = [
         "system", "सिस्टम", "जांच", "स्टेटस", "status", "check", "चेक",
-        "ram", "रैम", "disk", "डिस्क", "storage", "स्टोरेज", "uptime", "हाल", "diagnostic"
+        "ram", "रैम", "disk", "डिस्क", "storage", "स्टोरेज", "uptime", "हाल", "diagnostic", "cpu", "हार्डवेयर", "specs"
     ]
     if any(k in lower for k in system_keywords):
         try:
-            status = get_system_status()
-            user_input += f"\n[System Diagnostic Data: {json.dumps(status, ensure_ascii=False)}]\n(नोट: बॉस को 1-2 छोटे और स्पष्ट वाक्यों में सिस्टम की ताज़ा स्थिति जैसे डिस्क स्पेस और ऑनलाइन स्टेटस साफ़-साफ़ बता दो)"
+            from core.tools import get_detailed_sysinfo
+            status = get_detailed_sysinfo()
+            user_input += f"\n[System Diagnostic Data: {json.dumps(status, ensure_ascii=False)}]\n(नोट: बॉस को 1-2 छोटे और स्पष्ट वाक्यों में सिस्टम की ताज़ा स्थिति जैसे CPU Cores, RAM और डिस्क स्पेस साफ़-साफ़ बता दो)"
         except Exception as e:
             print(f"[Diagnostic Error] {e}")
 
+    # 6. Shell / Terminal Command Execution
+    cmd_triggers = [
+        "command chalao:", "command chalao", "run command:", "run command",
+        "terminal:", "shell:", "कमांड चलाओ:", "कमांड चलाओ", "command:"
+    ]
+    raw_cmd = None
+    for tr in cmd_triggers:
+        if tr in lower:
+            raw_cmd = user_input[lower.index(tr) + len(tr):].strip().lstrip(":").strip()
+            break
+    if raw_cmd and not any(k in lower for k in ["photo", "फोटो", "camera", "कैमरा"]):
+        try:
+            from core.tools import run_safe_shell_command
+            cmd_out = run_safe_shell_command(raw_cmd)
+            user_input += f"\n[Shell Execution Result for '{raw_cmd}': {cmd_out}]\n(नोट: बॉस को कमांड का रिजल्ट 1-2 वाक्यों में बता दो)"
+        except Exception as e:
+            print(f"[Shell Execution Error] {e}")
+
+    # 7. Conversation Memory Recall
     memory_keywords = ["याद", "पिछल", "पहले क्या", "बात हुई", "history", "memory", "remember", "क्या कहा", "क्या बोला"]
-    if any(k in lower for k in memory_keywords):
+    if any(k in lower for k in memory_keywords) and not any(k in lower for k in note_save_keywords):
         try:
             from core.db import get_recent_history
             recent_turns = get_recent_history(limit=8)
@@ -99,7 +164,7 @@ def _prepare_user_input(user_input: str) -> str:
         except Exception as e:
             print(f"[Memory Inject Error] {e}")
 
-    # Explicit camera facing instruction
+    # 8. Explicit camera facing instruction
     photo_keywords = ["photo", "फोटो", "तस्वीर", "picture", "capture", "खींच", "camera", "कैमरा"]
     if any(k in lower for k in photo_keywords):
         back_indicators = ["back", "rear", "peeche", "piche", "peche", "पीछे", "बैक", "रियर"]
