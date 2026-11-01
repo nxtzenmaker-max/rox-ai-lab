@@ -397,10 +397,25 @@
     subtitlesText.innerHTML = `<span class="speaker">${speaker}:</span> "${text}"`;
   }
 
-  /* ---------- LIVE STREAMING TTS & AUDIO QUEUE ENGINE ---------- */
+  /* ---------- STRICT ORDERED SEQUENTIAL AUDIO ENGINE ---------- */
+  var currentTurnId = 0;
+  var totalChunksCreated = 0;
+  var nextScheduleIndex = 0;
+  var pendingBuffers = {}; // index -> AudioBuffer | null
+  var isStreamingDone = false;
   var nextPlayTime = 0;
   var activeSources = [];
-  var isAudioStreaming = false;
+
+  function resetAudioEngine() {
+    currentTurnId++; // Invalidate any running/delayed fetches from previous turn
+    stopAllSpeechAudio();
+    totalChunksCreated = 0;
+    nextScheduleIndex = 0;
+    pendingBuffers = {};
+    isStreamingDone = false;
+    nextPlayTime = 0;
+    isSpeaking = false;
+  }
 
   function stopAllSpeechAudio() {
     activeSources.forEach(function(s) {
@@ -411,28 +426,72 @@
     isSpeaking = false;
   }
 
-  async function queueAndPlayAudio(textChunk, isFinalChunk) {
-    if (!textChunk || !textChunk.trim()) return;
-    ensureAudioCtx();
+  function enqueueSentenceChunk(textChunk) {
+    var clean = textChunk.trim();
+    if (!clean) return;
 
+    var chunkIndex = totalChunksCreated++;
+    var thisTurnId = currentTurnId;
+
+    fetchTTSChunk(clean, chunkIndex, thisTurnId);
+  }
+
+  async function fetchTTSChunk(text, index, turnId) {
     try {
+      ensureAudioCtx();
       var resp = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textChunk })
+        body: JSON.stringify({ text: text })
       });
-      if (!resp.ok) return;
+
+      if (turnId !== currentTurnId) return;
+
+      if (!resp.ok) {
+        handleChunkDecoded(index, null, turnId);
+        return;
+      }
 
       var arrayBuf = await resp.arrayBuffer();
-      var audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+      if (turnId !== currentTurnId) return;
 
-      scheduleAudioBuffer(audioBuf, isFinalChunk);
+      var audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+      if (turnId !== currentTurnId) return;
+
+      handleChunkDecoded(index, audioBuf, turnId);
     } catch(err) {
-      console.warn("Live TTS Chunk Error:", err);
+      console.warn("TTS Chunk fetch error:", err);
+      if (turnId === currentTurnId) {
+        handleChunkDecoded(index, null, turnId);
+      }
     }
   }
 
-  function scheduleAudioBuffer(buffer, isFinalChunk) {
+  function handleChunkDecoded(index, audioBuf, turnId) {
+    if (turnId !== currentTurnId) return;
+    pendingBuffers[index] = audioBuf;
+    drainSequentialQueue(turnId);
+  }
+
+  function drainSequentialQueue(turnId) {
+    if (turnId !== currentTurnId) return;
+
+    // Process STRICTLY in sequential order (0, 1, 2, 3...)
+    // If chunk 1 arrives before chunk 0, chunk 1 WAITS until chunk 0 is scheduled!
+    while (pendingBuffers.hasOwnProperty(nextScheduleIndex)) {
+      var buf = pendingBuffers[nextScheduleIndex];
+      delete pendingBuffers[nextScheduleIndex];
+      nextScheduleIndex++;
+
+      if (buf) {
+        scheduleAudioBuffer(buf);
+      }
+    }
+
+    checkTurnFinished();
+  }
+
+  function scheduleAudioBuffer(buffer) {
     ensureAudioCtx();
     isSpeaking = true;
     setStatus("SPEAKING...", "speaking");
@@ -441,7 +500,7 @@
     var source = audioCtx.createBufferSource();
     source.buffer = buffer;
     source.connect(analyser); // Drives the WebGL Orb visualizer
-    source.connect(audioCtx.destination); // Plays out of loudspeaker
+    source.connect(audioCtx.destination); // Speaker out
 
     var now = audioCtx.currentTime;
     var startTime = Math.max(now, nextPlayTime);
@@ -453,22 +512,29 @@
     source.onended = function() {
       var idx = activeSources.indexOf(source);
       if (idx > -1) activeSources.splice(idx, 1);
-
-      // If all scheduled chunks have finished playing
-      if (activeSources.length === 0 && (!isAudioStreaming || isFinalChunk)) {
-        isSpeaking = false;
-        setStatus("READY", "");
-        if (isCallActive) {
-          setTimeout(startListeningTurn, 150);
-        }
-      }
+      checkTurnFinished();
     };
+  }
+
+  function checkTurnFinished() {
+    // A turn is truly finished only when:
+    // 1. Text stream from Groq is finished
+    // 2. All chunks have been scheduled
+    // 3. All audio playback sources have finished playing
+    if (isStreamingDone && nextScheduleIndex >= totalChunksCreated && activeSources.length === 0) {
+      isSpeaking = false;
+      setStatus("READY", "");
+      glow = 0.0;
+      if (isCallActive) {
+        setTimeout(startListeningTurn, 200);
+      }
+    }
   }
 
   // Live Token Streaming Groq -> Live Sentence Deepgram TTS
   async function sendToGroq(userMsg) {
     if (!userMsg.trim()) return;
-    stopAllSpeechAudio();
+    resetAudioEngine();
 
     setStatus("THINKING...", "thinking");
     setSubtitle("YOU", userMsg);
@@ -477,7 +543,7 @@
 
     var fullReply = "";
     var currentSentence = "";
-    isAudioStreaming = true;
+    var turnId = currentTurnId;
 
     try {
       var resp = await fetch('/api/chat/stream', {
@@ -512,11 +578,18 @@
 
               setSubtitle("ROX", fullReply);
 
-              var isBoundary = /[।?!,;\n]/.test(token) || (currentSentence.length >= 25 && /\s/.test(token));
-              if (isBoundary && currentSentence.trim().length > 3) {
+              // High-quality sentence boundary detection:
+              // 1. Sentence enders (Hindi danda ।, period ., question mark ?, exclamation !, newline \n)
+              // 2. Or clause boundary (, or ;) if sentence length >= 45 characters
+              // 3. Or emergency space boundary if sentence length >= 80 characters
+              var isEndPunctuation = /[।\.?!\n]/.test(token);
+              var isClauseBreak = currentSentence.length >= 45 && /[,;]/.test(token);
+              var isLongSentence = currentSentence.length >= 80 && /\s/.test(token);
+
+              if ((isEndPunctuation || isClauseBreak || isLongSentence) && currentSentence.trim().length >= 6) {
                 var chunk = currentSentence.trim();
                 currentSentence = "";
-                queueAndPlayAudio(chunk, false);
+                enqueueSentenceChunk(chunk);
               }
             } catch(e) {}
           }
@@ -524,17 +597,13 @@
       }
 
       if (currentSentence.trim().length > 0) {
-        queueAndPlayAudio(currentSentence.trim(), true);
-      } else {
-        isAudioStreaming = false;
-        if (activeSources.length === 0) {
-          isSpeaking = false;
-          setStatus("READY", "");
-          if (isCallActive) {
-            setTimeout(startListeningTurn, 150);
-          }
-        }
+        enqueueSentenceChunk(currentSentence.trim());
+        currentSentence = "";
       }
+
+      isStreamingDone = true;
+      drainSequentialQueue(turnId);
+      checkTurnFinished();
 
       chatHistory.push({ role: "assistant", content: fullReply });
 
@@ -542,6 +611,8 @@
       console.error("Stream Error:", err);
       setSubtitle("ROX", "माफ़ करना, नेटवर्क में रुकावट आई।");
       setStatus("ERROR", "");
+      isStreamingDone = true;
+      checkTurnFinished();
       setTimeout(function(){ setStatus("READY", ""); }, 2000);
     }
   }
@@ -721,7 +792,7 @@
       // End call
       isCallActive = false;
       isListening = false;
-      stopAllSpeechAudio();
+      resetAudioEngine();
       micBtn.classList.remove('active');
       setStatus("CALL ENDED", "");
       if (micStream) {
