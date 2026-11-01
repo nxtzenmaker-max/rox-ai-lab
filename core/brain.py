@@ -24,7 +24,7 @@ SYSTEM_PROMPT = """
 - टूल्स और क्षमताएं:
   * कैमरा / फ़ोटो कैप्चर (Front & Back Camera): बॉस के हुक्म पर फ्रंट या बैक कैमरे से फोटो खींच सकती हो।
   * सिस्टम स्टेटस (CPU, RAM, Storage): कंप्यूटर का हाल बता सकती हो।
-  * डेटाबेस और मेमोरी (Turso Database): बातचीत और फोटो रिकॉर्ड सुरक्षित रख सकती हो।
+  * याददाश्त और मेमोरी (Turso Cloud Database): बॉस के साथ हुई हर बातचीत और आदेश को याद रख सकती हो। अगर बॉस पूछें कि "पहले क्या बोला था" या "तुम्हें याद है", तो डेटाबेस से याद करके सटीक जवाब दो।
   * लाइव वॉइस कॉल और टेलीफोनी।
 
 कमांड्स और एक्शन ट्रिगर (Commands & Action Triggers):
@@ -53,7 +53,7 @@ HARDCODED_GROQ_KEY = bytes(b ^ 0x5A for b in _GROQ_BUF).decode("utf-8")
 HARDCODED_GROQ_MODEL = "qwen/qwen3.8-27b"
 
 def _prepare_user_input(user_input: str) -> str:
-    """Detects system status queries in Hindi/English and attaches diagnostic data."""
+    """Detects system status and memory recall queries and attaches live context."""
     lower = user_input.lower()
     system_keywords = [
         "system", "सिस्टम", "जांच", "स्टेटस", "status", "check", "चेक",
@@ -65,6 +65,18 @@ def _prepare_user_input(user_input: str) -> str:
             user_input += f"\n[System Diagnostic Data: {json.dumps(status, ensure_ascii=False)}]\n(नोट: बॉस को 1-2 छोटे और स्पष्ट वाक्यों में सिस्टम की ताज़ा स्थिति जैसे डिस्क स्पेस और ऑनलाइन स्टेटस साफ़-साफ़ बता दो)"
         except Exception as e:
             print(f"[Diagnostic Error] {e}")
+
+    memory_keywords = ["याद", "पिछल", "पहले क्या", "बात हुई", "history", "memory", "remember", "क्या कहा", "क्या बोला"]
+    if any(k in lower for k in memory_keywords):
+        try:
+            from core.db import get_recent_history
+            recent_turns = get_recent_history(limit=8)
+            if recent_turns:
+                summary_lines = [f"{t['role'].capitalize()}: {t['content']}" for t in recent_turns if t.get('content') != user_input]
+                user_input += f"\n[Turso Database Memory Context: {json.dumps(summary_lines, ensure_ascii=False)}]\n(नोट: बॉस ने जो पहले कहा या पूछा था, डेटाबेस से उसे याद करके सटीक और आदर से जवाब दो)"
+        except Exception as e:
+            print(f"[Memory Inject Error] {e}")
+
     return user_input
 
 def get_ai_response(user_input: str, history: list = None) -> str:
@@ -75,10 +87,23 @@ def get_ai_response(user_input: str, history: list = None) -> str:
 
     user_input = _prepare_user_input(user_input)
 
+    history_messages = []
+    if history and len(history) >= 2:
+        for msg in history[-8:]:
+            history_messages.append(msg)
+    else:
+        try:
+            from core.db import get_recent_history
+            db_history = get_recent_history(limit=8)
+            for msg in db_history:
+                if msg.get("content") != user_input:
+                    history_messages.append(msg)
+        except Exception as e:
+            pass
+
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    if history:
-        for msg in history[-6:]: # keep last 3 turns
-            messages.append(msg)
+    for msg in history_messages[-8:]:
+        messages.append(msg)
     messages.append({"role": "user", "content": user_input})
 
     try:
@@ -104,10 +129,23 @@ def stream_ai_response(user_input: str, history: list = None):
 
     user_input = _prepare_user_input(user_input)
 
+    history_messages = []
+    if history and len(history) >= 2:
+        for msg in history[-8:]:
+            history_messages.append(msg)
+    else:
+        try:
+            from core.db import get_recent_history
+            db_history = get_recent_history(limit=8)
+            for msg in db_history:
+                if msg.get("content") != user_input:
+                    history_messages.append(msg)
+        except Exception as e:
+            pass
+
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    if history:
-        for msg in history[-6:]:
-            messages.append(msg)
+    for msg in history_messages[-8:]:
+        messages.append(msg)
     messages.append({"role": "user", "content": user_input})
 
     try:

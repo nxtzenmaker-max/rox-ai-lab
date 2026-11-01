@@ -121,6 +121,59 @@ def log_photo(facing: str):
     except Exception as e:
         print(f"[DB Photo Log Error] {e}")
 
+def get_recent_history(limit: int = 12) -> list:
+    """
+    Retrieves the last `limit` messages from Turso Database or SQLite fallback,
+    formatted as [{"role": "user"|"assistant", "content": "..."}].
+    Ordered chronologically (oldest to newest).
+    """
+    messages = []
+    if is_turso_configured():
+        try:
+            http_url = _get_turso_http_url()
+            headers = {
+                "Authorization": f"Bearer {TURSO_AUTH_TOKEN}",
+                "Content-Type": "application/json"
+            }
+            body = {
+                "requests": [
+                    {
+                        "type": "execute",
+                        "stmt": {
+                            "sql": f"SELECT role, message FROM conversation_history ORDER BY id DESC LIMIT {limit}"
+                        }
+                    },
+                    {"type": "close"}
+                ]
+            }
+            res = requests.post(http_url, headers=headers, json=body, timeout=4)
+            if res.status_code == 200:
+                data = res.json()
+                raw_rows = data.get("results", [{}])[0].get("response", {}).get("result", {}).get("rows", [])
+                for row in reversed(raw_rows):
+                    role = row[0].get("value", "")
+                    content = row[1].get("value", "")
+                    if role and content:
+                        messages.append({"role": role, "content": content})
+                if messages:
+                    return messages
+        except Exception as e:
+            print(f"[Turso Get History Error] {e}")
+
+    # Fallback to local SQLite
+    try:
+        conn = _get_sqlite_conn()
+        cur = conn.cursor()
+        cur.execute(f"SELECT role, message FROM conversation_history ORDER BY id DESC LIMIT {limit}")
+        rows = cur.fetchall()
+        conn.close()
+        for r in reversed(rows):
+            messages.append({"role": r["role"], "content": r["message"]})
+        return messages
+    except Exception as e:
+        print(f"[SQLite Get History Error] {e}")
+        return []
+
 # Initialize on module load
 try:
     init_db()
