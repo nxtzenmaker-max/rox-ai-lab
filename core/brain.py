@@ -1,5 +1,7 @@
 import os
 import json
+import subprocess
+import shutil
 from dotenv import load_dotenv
 from groq import Groq
 from core.tools import get_system_status, run_safe_shell_command
@@ -238,8 +240,127 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
 
     return user_input, term_tag
 
+def stream_antigravity(user_input: str, history: list = None):
+    """
+    Invokes Google Antigravity (agy CLI) with low reasoning effort, full autonomous permissions,
+    and streaming NDJSON output.
+    Captures live tool executions (run_command) and yields [TERMINAL_VIEW: ...] tags,
+    followed by live text deltas in real-time.
+    """
+    agy_bin = shutil.which("agy")
+    if not agy_bin:
+        for candidate in ["/usr/local/bin/agy", os.path.expanduser("~/.local/bin/agy"), "/home/ajit/.local/bin/agy", "/home/ipx/.local/bin/agy"]:
+            if os.path.exists(candidate) and os.access(candidate, os.X_OK):
+                agy_bin = candidate
+                break
+
+    if not agy_bin:
+        return None
+
+    # Check OAuth token existence
+    oauth_paths = [
+        os.path.expanduser("~/.gemini/antigravity-cli/antigravity-oauth-token"),
+        "/home/ajit/.gemini/antigravity-cli/antigravity-oauth-token",
+        "/home/ipx/.gemini/antigravity-cli/antigravity-oauth-token"
+    ]
+    if not any(os.path.exists(p) for p in oauth_paths):
+        return None
+
+    # Construct context prompt
+    prompt = ""
+    if history:
+        for h in history[-2:]:
+            role = "Boss" if h.get("role") == "user" else "ROX"
+            content = h.get("content", "").strip()
+            if content and not content.startswith("[TERMINAL_VIEW:"):
+                prompt += f"[{role}]: {content}\n"
+        prompt += f"[Boss]: {user_input}"
+    else:
+        prompt = user_input
+
+    cmd = [
+        agy_bin,
+        "-p", prompt,
+        "--effort", "low",
+        "--dangerously-skip-permissions",
+        "--output-format", "stream-json"
+    ]
+
+    working_dir = os.path.expanduser("~")
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=working_dir
+        )
+    except Exception as e:
+        print(f"[Antigravity Launch Error] {e}")
+        return None
+
+    full_text = ""
+    try:
+        for line in proc.stdout:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+                if "step_update" in ev:
+                    su = ev["step_update"]
+                    stype = su.get("step_type")
+                    state = su.get("state")
+                    if stype == "tool" and state == "DONE":
+                        ti = su.get("tool_info", {})
+                        tname = su.get("tool_name")
+                        if tname == "run_command":
+                            cmd_line = ti.get("parameters", {}).get("CommandLine", "")
+                            out = ti.get("output", "")
+                            payload = json.dumps({"cmd": cmd_line, "out": out}, ensure_ascii=False)
+                            yield f"[TERMINAL_VIEW: {payload}]\n"
+                    elif stype == "agent_response":
+                        delta = su.get("text_delta")
+                        if delta:
+                            full_text += delta
+                            yield delta
+                elif "result" in ev:
+                    if not full_text:
+                        resp = ev["result"].get("response", "")
+                        if resp:
+                            full_text += resp
+                            yield resp
+            except Exception:
+                pass
+    finally:
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            proc.kill()
+
+    # Camera tag injection if requested by user but model missed it
+    lower = user_input.lower()
+    if any(k in lower for k in ["photo", "फोटो", "selfie", "camera", "कैमरा", "तस्वीर"]):
+        if "[ACTION: CAPTURE_PHOTO" not in full_text:
+            back_indicators = ["back", "rear", "peeche", "piche", "पीछे", "बैक", "रियर"]
+            if any(b in lower for b in back_indicators):
+                yield "\n[ACTION: CAPTURE_PHOTO:back]"
+            else:
+                yield "\n[ACTION: CAPTURE_PHOTO:front]"
+
 def get_ai_response(user_input: str, history: list = None) -> str:
-    """Generates a smart response using Groq / LLM with automatic rate-limit fallback."""
+    """Generates a smart response using Google Antigravity (agy), falling back to Groq / LLM."""
+    try:
+        agy_gen = stream_antigravity(user_input, history)
+        if agy_gen is not None:
+            chunks = []
+            for chunk in agy_gen:
+                chunks.append(chunk)
+            if chunks:
+                return "".join(chunks).strip()
+    except Exception as e:
+        print(f"[Antigravity get_ai_response fallback] {e}")
+
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip() or HARDCODED_GROQ_KEY
     preferred_model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
@@ -297,7 +418,19 @@ def get_ai_response(user_input: str, history: list = None) -> str:
     return fallback_reply
 
 def stream_ai_response(user_input: str, history: list = None):
-    """Streams response tokens from Groq in real time with automatic rate-limit fallback."""
+    """Streams response tokens from Google Antigravity (agy), falling back to Groq in real time."""
+    try:
+        agy_gen = stream_antigravity(user_input, history)
+        if agy_gen is not None:
+            first_chunk = next(agy_gen, None)
+            if first_chunk is not None:
+                yield first_chunk
+                for chunk in agy_gen:
+                    yield chunk
+                return
+    except Exception as e:
+        print(f"[Antigravity stream_ai_response fallback] {e}")
+
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip() or HARDCODED_GROQ_KEY
     preferred_model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
