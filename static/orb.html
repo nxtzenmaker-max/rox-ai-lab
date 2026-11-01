@@ -1015,6 +1015,8 @@
   var micBtn = document.getElementById('micBtn');
   var textInput = document.getElementById('textInput');
   var chatHistory = [];
+  var activeConversationId = null;
+  try { activeConversationId = localStorage.getItem('rox_conv_id') || null; } catch(e){}
   var isListening = false;
   var isSpeaking = false;
   var recognition = null;
@@ -1687,7 +1689,7 @@
         resp = await fetch(chatStreamUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3) }),
+          body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3), conversation_id: activeConversationId }),
           signal: abortCtrl.signal
         });
       } catch(streamFetchErr) {
@@ -1695,7 +1697,7 @@
           resp = await fetch('/api/chat/stream', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3) }),
+            body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3), conversation_id: activeConversationId }),
             signal: abortCtrl.signal
           });
         } else {
@@ -1731,6 +1733,10 @@
 
             try {
               var parsed = JSON.parse(dataStr);
+              if (parsed.conversation_id) {
+                activeConversationId = parsed.conversation_id;
+                try { localStorage.setItem('rox_conv_id', activeConversationId); } catch(e){}
+              }
               var token = parsed.token || "";
               fullReply += token;
 
@@ -1862,17 +1868,21 @@
           fbResp = await fetch(chatUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3) })
+            body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3), conversation_id: activeConversationId })
           });
         } catch(e) {
           fbResp = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3) })
+            body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3), conversation_id: activeConversationId })
           });
         }
 
         var fbData = await fbResp.json();
+        if (fbData.conversation_id) {
+          activeConversationId = fbData.conversation_id;
+          try { localStorage.setItem('rox_conv_id', activeConversationId); } catch(e){}
+        }
         var fbReply = (fbData.reply || "").trim();
         if (fbReply) {
           var fbEmo = detectEmotion(fbReply);

@@ -245,12 +245,49 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
 
     return user_input, term_tag
 
-def stream_antigravity(user_input: str, history: list = None):
+CONV_CACHE_FILE = os.path.expanduser("~/.gemini/active_rox_session_id.txt")
+_ACTIVE_CONVERSATION_ID: str | None = None
+
+def get_active_conversation_id() -> str | None:
+    global _ACTIVE_CONVERSATION_ID
+    if _ACTIVE_CONVERSATION_ID:
+        return _ACTIVE_CONVERSATION_ID
+    try:
+        if os.path.exists(CONV_CACHE_FILE):
+            with open(CONV_CACHE_FILE, "r", encoding="utf-8") as f:
+                cid = f.read().strip()
+                if cid:
+                    _ACTIVE_CONVERSATION_ID = cid
+                    return cid
+    except Exception:
+        pass
+    return None
+
+def set_active_conversation_id(cid: str):
+    global _ACTIVE_CONVERSATION_ID
+    if not cid:
+        return
+    _ACTIVE_CONVERSATION_ID = cid
+    try:
+        os.makedirs(os.path.dirname(CONV_CACHE_FILE), exist_ok=True)
+        with open(CONV_CACHE_FILE, "w", encoding="utf-8") as f:
+            f.write(cid.strip())
+    except Exception:
+        pass
+
+def reset_active_conversation():
+    global _ACTIVE_CONVERSATION_ID
+    _ACTIVE_CONVERSATION_ID = None
+    try:
+        if os.path.exists(CONV_CACHE_FILE):
+            os.remove(CONV_CACHE_FILE)
+    except Exception:
+        pass
+
+def stream_antigravity(user_input: str, history: list = None, conversation_id: str = None):
     """
-    Invokes Google Antigravity (agy CLI) with low reasoning effort, full autonomous permissions,
-    and streaming NDJSON output.
-    Captures live tool executions (run_command) and yields [TERMINAL_VIEW: ...] tags,
-    followed by live text deltas in real-time.
+    Invokes Google Antigravity (agy CLI) with persistent conversation session,
+    low reasoning effort, full autonomous permissions, and streaming NDJSON output.
     """
     agy_bin = shutil.which("agy")
     if not agy_bin:
@@ -271,6 +308,13 @@ def stream_antigravity(user_input: str, history: list = None):
     if not any(os.path.exists(p) for p in oauth_paths):
         return None
 
+    # Check if user requested a fresh conversation
+    lower = user_input.lower()
+    if any(k in lower for k in ["new chat", "naye sire se", "reset conversation", "clear memory", "start fresh", "नया चैट"]):
+        reset_active_conversation()
+
+    active_cid = conversation_id or get_active_conversation_id()
+
     # Construct context prompt with mandatory Devanagari Hindi and ultra-conciseness instruction
     devanagari_rule = (
         "(अति महत्वपूर्ण नियम:\n"
@@ -279,16 +323,8 @@ def stream_antigravity(user_input: str, history: list = None):
         "3. जो भी काम, फाइल लिखना या कमांड चलाना हो, बैकएंड में चुपचाप करो। बातचीत में केवल इतना कहो: 'जी बॉस, मैंने बैकएंड में काम कर दिया है!'\n"
         "4. हमेशा केवल देवनागरी हिंदी में ही बोलो।)"
     )
-    prompt = ""
-    if history:
-        for h in history[-2:]:
-            role = "Boss" if h.get("role") == "user" else "ROX"
-            content = h.get("content", "").strip()
-            if content and not content.startswith("[TERMINAL_VIEW"):
-                prompt += f"[{role}]: {content}\n"
-        prompt += f"[Boss]: {user_input}\n{devanagari_rule}"
-    else:
-        prompt = f"{user_input}\n{devanagari_rule}"
+
+    prompt = f"{user_input}\n{devanagari_rule}"
 
     cmd = [
         agy_bin,
@@ -297,6 +333,8 @@ def stream_antigravity(user_input: str, history: list = None):
         "--dangerously-skip-permissions",
         "--output-format", "stream-json"
     ]
+    if active_cid:
+        cmd.extend(["--conversation", active_cid])
 
     working_dir = os.path.expanduser("~")
     try:
@@ -319,6 +357,10 @@ def stream_antigravity(user_input: str, history: list = None):
                 continue
             try:
                 ev = json.loads(line)
+                new_cid = ev.get("conversation_id")
+                if new_cid:
+                    set_active_conversation_id(new_cid)
+
                 if "step_update" in ev:
                     su = ev["step_update"]
                     stype = su.get("step_type")
@@ -361,10 +403,10 @@ def stream_antigravity(user_input: str, history: list = None):
             else:
                 yield "\n[ACTION: CAPTURE_PHOTO:front]"
 
-def get_ai_response(user_input: str, history: list = None) -> str:
+def get_ai_response(user_input: str, history: list = None, conversation_id: str = None) -> str:
     """Generates a smart response using Google Antigravity (agy), falling back to Groq / LLM."""
     try:
-        agy_gen = stream_antigravity(user_input, history)
+        agy_gen = stream_antigravity(user_input, history, conversation_id)
         if agy_gen is not None:
             chunks = []
             for chunk in agy_gen:
@@ -430,10 +472,10 @@ def get_ai_response(user_input: str, history: list = None) -> str:
         fallback_reply = f"{term_tag}\n{fallback_reply}"
     return fallback_reply
 
-def stream_ai_response(user_input: str, history: list = None):
+def stream_ai_response(user_input: str, history: list = None, conversation_id: str = None):
     """Streams response tokens from Google Antigravity (agy), falling back to Groq in real time."""
     try:
-        agy_gen = stream_antigravity(user_input, history)
+        agy_gen = stream_antigravity(user_input, history, conversation_id)
         if agy_gen is not None:
             first_chunk = next(agy_gen, None)
             if first_chunk is not None:

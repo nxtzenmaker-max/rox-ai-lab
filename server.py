@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 # Load environment
 load_dotenv()
 
-from core.brain import get_ai_response, stream_ai_response
+from core.brain import get_ai_response, stream_ai_response, get_active_conversation_id
 from core.voice import generate_speech, transcribe_audio_deepgram
 from core.db import save_message, log_photo, is_turso_configured
 from core.tools import is_running_on_vps
@@ -81,6 +81,7 @@ async def get_config():
 class ChatRequest(BaseModel):
     message: str
     history: list = []
+    conversation_id: str | None = None
 
 class TTSRequest(BaseModel):
     text: str
@@ -122,10 +123,10 @@ import threading
 async def chat_endpoint(req: ChatRequest):
     print(f"[Chat Request] User message: '{req.message}'")
     threading.Thread(target=save_message, args=("user", req.message), daemon=True).start()
-    reply = get_ai_response(req.message, req.history)
+    reply = get_ai_response(req.message, req.history, conversation_id=req.conversation_id)
     print(f"[Chat Response] Reply: '{reply}'")
     threading.Thread(target=save_message, args=("assistant", reply), daemon=True).start()
-    return {"reply": reply}
+    return {"reply": reply, "conversation_id": get_active_conversation_id()}
 
 @app.post("/api/chat/stream")
 async def chat_stream_endpoint(req: ChatRequest):
@@ -138,7 +139,7 @@ async def chat_stream_endpoint(req: ChatRequest):
             try:
                 async def vps_proxy_generator():
                     async with aiohttp.ClientSession() as session:
-                        async with session.post(f"{vps_url}/api/chat/stream", json={"message": req.message, "history": req.history}, timeout=12) as resp:
+                        async with session.post(f"{vps_url}/api/chat/stream", json={"message": req.message, "history": req.history, "conversation_id": req.conversation_id}, timeout=12) as resp:
                             async for chunk in resp.content.iter_any():
                                 yield chunk
                 return StreamingResponse(
@@ -152,11 +153,14 @@ async def chat_stream_endpoint(req: ChatRequest):
     # Process locally on VPS (or fallback on Vercel)
     def event_generator():
         full_tokens = []
-        for token in stream_ai_response(req.message, req.history):
+        for token in stream_ai_response(req.message, req.history, conversation_id=req.conversation_id):
             full_tokens.append(token)
             payload = json.dumps({"token": token}, ensure_ascii=False)
             yield f"data: {payload}\n\n"
         threading.Thread(target=save_message, args=("assistant", "".join(full_tokens)), daemon=True).start()
+        cid = get_active_conversation_id()
+        if cid:
+            yield f"data: {json.dumps({'conversation_id': cid})}\n\n"
         yield "data: [DONE]\n\n"
     return StreamingResponse(
         event_generator(),
