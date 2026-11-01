@@ -201,7 +201,7 @@
     border: 1px solid rgba(0, 242, 254, 0.45);
     box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
   }
-  .speaker-pill.speaker-boss {
+  .speaker-pill.speaker-boss, .speaker-pill.speaker-rudra {
     background: rgba(255, 255, 255, 0.1);
     color: #e2e8f0;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -544,7 +544,7 @@
 <div id="photoModal" class="photo-modal" style="display:none;">
   <div class="photo-card">
     <div class="photo-header">
-      <span class="photo-title">📷 PHOTO CAPTURED, BOSS!</span>
+      <span class="photo-title">📷 PHOTO CAPTURED, RUDRA!</span>
       <button class="photo-close-btn" onclick="closePhotoModal()">✕</button>
     </div>
     <img id="photoPreview" class="photo-img" src="" alt="Captured Photo" />
@@ -1065,8 +1065,8 @@
       else if (emotion === 'love') emoBadge = '<span class="sub-emo">💖 प्रेम</span>';
       else if (emotion === 'excited') emoBadge = '<span class="sub-emo">✨ उत्साह</span>';
     }
-    var speakerClass = isRox ? 'speaker-rox' : 'speaker-boss';
-    var speakerLabel = isRox ? 'ROX' : 'BOSS';
+    var speakerClass = isRox ? 'speaker-rox' : 'speaker-rudra';
+    var speakerLabel = isRox ? 'RJN' : 'RUDRA';
 
     subtitlesText.innerHTML = `
       <div class="sub-header">
@@ -1654,7 +1654,7 @@
     resetAudioEngine();
 
     setStatus("THINKING...", "thinking");
-    setSubtitle("BOSS", userMsg);
+    setSubtitle("RUDRA", userMsg);
 
     chatHistory.push({ role: "user", content: userMsg });
 
