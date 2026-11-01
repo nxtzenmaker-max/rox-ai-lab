@@ -408,9 +408,75 @@
   resize();
 
   gl.uniform1f(uDpr, dpr);
-  gl.uniform3f(uColA, 0.52, 0.35, 1.00);   // violet
-  gl.uniform3f(uColB, 1.00, 0.32, 0.72);   // pink
-  gl.uniform3f(uColC, 0.25, 0.88, 1.00);   // cyan
+
+  // Dynamic WebGL Emotion Aura Palettes
+  var defaultColA = [0.52, 0.35, 1.00];
+  var defaultColB = [1.00, 0.32, 0.72];
+  var defaultColC = [0.25, 0.88, 1.00];
+
+  var curColA = [0.52, 0.35, 1.00];
+  var curColB = [1.00, 0.32, 0.72];
+  var curColC = [0.25, 0.88, 1.00];
+
+  var targetColA = [0.52, 0.35, 1.00];
+  var targetColB = [1.00, 0.32, 0.72];
+  var targetColC = [0.25, 0.88, 1.00];
+
+  var currentEmotion = "neutral";
+
+  function setEmotion(emo) {
+    currentEmotion = emo || "neutral";
+    if (emo === "laugh") {
+      // Golden Amber, Joyful Rose Pink, Radiant Yellow
+      targetColA = [1.00, 0.72, 0.15];
+      targetColB = [1.00, 0.28, 0.62];
+      targetColC = [1.00, 0.92, 0.35];
+      glowEl.style.background = "radial-gradient(circle, rgba(255, 180, 50, 0.45) 0%, rgba(255, 60, 140, 0.25) 45%, rgba(0,0,0,0) 70%)";
+    } else if (emo === "cry") {
+      // Deep Melancholy Blue, Teardrop Cyan, Soft Violet
+      targetColA = [0.08, 0.38, 0.95];
+      targetColB = [0.15, 0.72, 0.88];
+      targetColC = [0.45, 0.20, 0.85];
+      glowEl.style.background = "radial-gradient(circle, rgba(20, 120, 255, 0.45) 0%, rgba(0, 200, 240, 0.25) 45%, rgba(0,0,0,0) 70%)";
+    } else if (emo === "sing") {
+      // Vivid Neon Purple, Vibrant Musical Magenta, Electric Turquoise
+      targetColA = [0.70, 0.15, 1.00];
+      targetColB = [1.00, 0.10, 0.70];
+      targetColC = [0.00, 0.95, 0.85];
+      glowEl.style.background = "radial-gradient(circle, rgba(180, 50, 255, 0.5) 0%, rgba(255, 30, 160, 0.3) 45%, rgba(0,0,0,0) 70%)";
+    } else if (emo === "love") {
+      // Romantic Ruby Crimson, Tender Pink, Soft Orchid
+      targetColA = [1.00, 0.15, 0.45];
+      targetColB = [0.85, 0.30, 0.75];
+      targetColC = [1.00, 0.65, 0.75];
+      glowEl.style.background = "radial-gradient(circle, rgba(255, 50, 120, 0.5) 0%, rgba(220, 40, 180, 0.28) 45%, rgba(0,0,0,0) 70%)";
+    } else if (emo === "excited") {
+      // Electric Cyan, Hyper Orange, Vivid Gold
+      targetColA = [0.00, 0.95, 0.92];
+      targetColB = [1.00, 0.42, 0.08];
+      targetColC = [0.98, 0.90, 0.20];
+      glowEl.style.background = "radial-gradient(circle, rgba(0, 242, 254, 0.5) 0%, rgba(255, 120, 30, 0.3) 45%, rgba(0,0,0,0) 70%)";
+    } else {
+      // Neutral Ambient Violet, Pink, Cyan
+      targetColA = [defaultColA[0], defaultColA[1], defaultColA[2]];
+      targetColB = [defaultColB[0], defaultColB[1], defaultColB[2]];
+      targetColC = [defaultColC[0], defaultColC[1], defaultColC[2]];
+      glowEl.style.background = "radial-gradient(circle, rgba(150,90,255,.38) 0%, rgba(255,80,175,.18) 40%, rgba(0,0,0,0) 68%)";
+    }
+  }
+
+  function detectEmotion(text) {
+    if (!text) return "neutral";
+    var m = text.match(/\[EMOTION:\s*(laugh|cry|sing|love|excited|neutral)\]/i);
+    if (m) return m[1].toLowerCase();
+    var lower = text.toLowerCase();
+    if (lower.includes("हाहा") || lower.includes("हीही") || lower.includes("हँस") || lower.includes("खिलखिला") || lower.includes("मज़ाकिया")) return "laugh";
+    if (lower.includes("उहू") || lower.includes("रोना") || lower.includes("रोने") || lower.includes("आंसू") || lower.includes("दुख") || lower.includes("सिसक") || lower.includes("दिल टूट")) return "cry";
+    if (lower.includes("♪") || lower.includes("ला ला") || lower.includes("गाना") || lower.includes("सुर") || lower.includes("सा रे गा मा") || lower.includes("धुन")) return "sing";
+    if (lower.includes("ख्याल") || lower.includes("प्यार") || lower.includes("अपनापन") || lower.includes("दिल से")) return "love";
+    if (lower.includes("अरे वाह") || lower.includes("कमाल") || lower.includes("बधाई") || lower.includes("जोश")) return "excited";
+    return "neutral";
+  }
 
   var scale = 1.0, glow = 0.0;
   var touchX = 0, touchY = 0, touchT = -100, touchS = 0, lastHit = 0;
@@ -447,6 +513,17 @@
     gl.uniform1f(uGlow, glow);
     gl.uniform4f(uTouch, touchX, touchY, touchT, touchS);
     glowEl.style.opacity = (0.3 + 0.55 * glow).toFixed(3);
+
+    // Fluid emotion palette morphing
+    for (var ci = 0; ci < 3; ci++) {
+      curColA[ci] += (targetColA[ci] - curColA[ci]) * 0.05;
+      curColB[ci] += (targetColB[ci] - curColB[ci]) * 0.05;
+      curColC[ci] += (targetColC[ci] - curColC[ci]) * 0.05;
+    }
+    gl.uniform3f(uColA, curColA[0], curColA[1], curColA[2]);
+    gl.uniform3f(uColB, curColB[0], curColB[1], curColB[2]);
+    gl.uniform3f(uColC, curColC[0], curColC[1], curColC[2]);
+
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.uniform1fv(uBands, bands);
     gl.uniform1f(uTime, t);
@@ -479,13 +556,21 @@
   }
 
   var subtitlesBox = document.getElementById('subtitlesBox');
-  function setSubtitle(speaker, text){
+  function setSubtitle(speaker, text, emotion){
     if(!text || !text.trim()){
       if(subtitlesBox) subtitlesBox.style.display = 'none';
       return;
     }
     if(subtitlesBox) subtitlesBox.style.display = 'flex';
-    subtitlesText.innerHTML = `<span class="speaker">${speaker}:</span> "${text}"`;
+    var emoBadge = '';
+    if (speaker === 'ROX' && emotion && emotion !== 'neutral') {
+      if (emotion === 'laugh') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#f59e0b;">😄 (हँसी)</span>';
+      else if (emotion === 'cry') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#38bdf8;">😢 (भावुक)</span>';
+      else if (emotion === 'sing') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#e879f9;">🎵 (गाना)</span>';
+      else if (emotion === 'love') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#fb7185;">💖 (प्यार)</span>';
+      else if (emotion === 'excited') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#34d399;">✨ (उत्साह)</span>';
+    }
+    subtitlesText.innerHTML = `<span class="speaker">${speaker}${emoBadge}:</span> "${text}"`;
   }
 
   /* ---------- STRICT ORDERED SEQUENTIAL AUDIO ENGINE ---------- */
@@ -646,6 +731,7 @@
     isStreamingDone = false;
     nextPlayTime = 0;
     isSpeaking = false;
+    setEmotion("neutral");
   }
 
   function stopAllSpeechAudio() {
@@ -658,8 +744,8 @@
   }
 
   function enqueueSentenceChunk(textChunk) {
-    // Strip action tags like [ACTION: CAPTURE_PHOTO] so TTS never speaks raw brackets
-    var clean = textChunk.replace(/\[ACTION:[^\]]+\]/gi, '').trim();
+    // Strip action and emotion tags so TTS never speaks raw brackets
+    var clean = textChunk.replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
     if (!clean) return;
 
     var chunkIndex = totalChunksCreated++;
@@ -811,6 +897,7 @@
       isSpeaking = false;
       setStatus("READY", "");
       glow = 0.0;
+      setEmotion("neutral");
       if (isCallActive) {
         setTimeout(startListeningTurn, 200);
       }
@@ -823,7 +910,7 @@
     resetAudioEngine();
 
     setStatus("THINKING...", "thinking");
-    setSubtitle("YOU", userMsg);
+    setSubtitle("BOSS", userMsg);
 
     chatHistory.push({ role: "user", content: userMsg });
 
@@ -868,8 +955,13 @@
               fullReply += token;
               currentSentence += token;
 
-              var cleanSubtitle = fullReply.replace(/\[ACTION:[^\]]+\]/gi, '').trim();
-              setSubtitle("ROX", cleanSubtitle);
+              var emo = detectEmotion(fullReply);
+              if (emo !== currentEmotion && emo !== "neutral") {
+                setEmotion(emo);
+              }
+
+              var cleanSubtitle = fullReply.replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
+              setSubtitle("ROX", cleanSubtitle, emo);
 
               // Trigger photo capture command (front vs back) if requested by Boss
               if (!actionTriggered && fullReply.includes("[ACTION: CAPTURE_PHOTO")) {
