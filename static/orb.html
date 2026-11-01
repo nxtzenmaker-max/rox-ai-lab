@@ -870,6 +870,8 @@
       var decoder = new TextDecoder("utf-8");
       var buffer = "";
 
+      var streamCompleted = false;
+
       while (true) {
         var result = await reader.read();
         if (result.done) break;
@@ -882,7 +884,10 @@
           var line = lines[i].trim();
           if (line.startsWith("data: ")) {
             var dataStr = line.substring(6).trim();
-            if (dataStr === "[DONE]") continue;
+            if (dataStr === "[DONE]") {
+              streamCompleted = true;
+              break;
+            }
 
             try {
               var parsed = JSON.parse(dataStr);
@@ -903,11 +908,11 @@
 
               // High-quality sentence boundary detection:
               // 1. Sentence enders (Hindi danda ।, period ., question mark ?, exclamation !, newline \n)
-              // 2. Or clause boundary (, or ;) if sentence length >= 45 characters
-              // 3. Or emergency space boundary if sentence length >= 80 characters
+              // 2. Or clause boundary (, or ;) if sentence length >= 40 characters
+              // 3. Or emergency space boundary if sentence length >= 70 characters
               var isEndPunctuation = /[।\.?!\n]/.test(token);
-              var isClauseBreak = currentSentence.length >= 45 && /[,;]/.test(token);
-              var isLongSentence = currentSentence.length >= 80 && /\s/.test(token);
+              var isClauseBreak = currentSentence.length >= 40 && /[,;]/.test(token);
+              var isLongSentence = currentSentence.length >= 70 && /\s/.test(token);
 
               if ((isEndPunctuation || isClauseBreak || isLongSentence) && currentSentence.trim().length >= 6) {
                 var chunk = currentSentence.trim();
@@ -917,8 +922,14 @@
             } catch(e) {}
           }
         }
+
+        // If [DONE] tag was received, exit stream loop immediately (don't wait for Vercel TCP keepalive)
+        if (streamCompleted) {
+          break;
+        }
       }
 
+      // Flush any remaining sentence to TTS
       if (currentSentence.trim().length > 0) {
         enqueueSentenceChunk(currentSentence.trim());
         currentSentence = "";
@@ -928,13 +939,13 @@
       drainSequentialQueue(turnId);
       checkTurnFinished();
 
-      // Failsafe status watchdog: If still THINKING after 4 seconds, reset to READY
+      // Failsafe status watchdog: If still THINKING after 2.5 seconds, reset to READY
       setTimeout(function() {
         if (turnId === currentTurnId && !isSpeaking && activeSources.length === 0) {
           setStatus("READY", "");
           if (isCallActive) startListeningTurn();
         }
-      }, 4000);
+      }, 2500);
 
       chatHistory.push({ role: "assistant", content: fullReply });
 
