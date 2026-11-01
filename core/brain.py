@@ -76,7 +76,8 @@ SYSTEM_PROMPT = """
 # Zero-Config Vercel Credentials
 _GROQ_BUF = [61, 41, 49, 5, 14, 20, 23, 42, 56, 41, 62, 106, 18, 3, 45, 9, 109, 18, 3, 110, 111, 50, 53, 14, 13, 29, 62, 35, 56, 105, 28, 3, 15, 25, 40, 24, 19, 23, 13, 110, 43, 27, 60, 60, 16, 15, 29, 104, 53, 35, 21, 111, 21, 11, 14, 25]
 HARDCODED_GROQ_KEY = bytes(b ^ 0x5A for b in _GROQ_BUF).decode("utf-8")
-HARDCODED_GROQ_MODEL = "qwen/qwen3.8-27b"
+HARDCODED_GROQ_MODEL = "openai/gpt-oss-120b"
+AVAILABLE_GROQ_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
 
 import re
 
@@ -235,78 +236,115 @@ def _prepare_user_input(user_input: str) -> str:
     return user_input
 
 def get_ai_response(user_input: str, history: list = None) -> str:
-    """Generates a smart response using Groq / LLM with tool calling support."""
+    """Generates a smart response using Groq / LLM with automatic rate-limit fallback."""
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip() or HARDCODED_GROQ_KEY
-    model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
+    preferred_model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
 
     user_input = _prepare_user_input(user_input)
 
+    # Keep conversation history compact (last 3 turns) to prevent 429 token limits
     history_messages = []
     if history and len(history) >= 2:
-        for msg in history[-8:]:
+        for msg in history[-3:]:
             history_messages.append(msg)
     else:
         try:
             from core.db import get_recent_history
-            db_history = get_recent_history(limit=8)
+            db_history = get_recent_history(limit=3)
             for msg in db_history:
                 if msg.get("content") != user_input:
                     history_messages.append(msg)
-        except Exception as e:
+        except Exception:
             pass
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for msg in history_messages[-8:]:
+    for msg in history_messages[-3:]:
         messages.append(msg)
     messages.append({"role": "user", "content": user_input})
 
-    try:
-        completion = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=0.6,
-            max_tokens=400
-        )
-        content = completion.choices[0].message.content or ""
-        if not content.strip():
-            return "जी बॉस, मैं सुन रही हूँ। बताइए, क्या आज्ञा है?"
-        return content.strip()
-    except Exception as e:
-        print(f"[Brain Error] {e}")
-        return f"माफ़ करना बॉस, समस्या आई: {str(e)}"
+    # Resilient multi-model fallback list
+    models_to_try = [preferred_model] + [m for m in AVAILABLE_GROQ_MODELS if m != preferred_model]
+
+    last_error = None
+    for m in models_to_try:
+        try:
+            extra = {"reasoning_format": "hidden"} if "gpt-oss" in m else {}
+            completion = client.chat.completions.create(
+                model=m,
+                messages=messages,
+                temperature=0.6,
+                max_tokens=600 if "gpt-oss" in m else 350,
+                extra_body=extra if extra else None
+            )
+            content = completion.choices[0].message.content or ""
+            if content.strip():
+                return content.strip()
+        except Exception as e:
+            last_error = e
+            err_str = str(e).lower()
+            if "429" in err_str or "rate_limit" in err_str or "quota" in err_str:
+                print(f"[Brain 429] Model {m} rate limited, falling back to next available model...")
+                continue
+            print(f"[Brain Error on {m}] {e}")
+            break
+
+    return f"माफ़ करना बॉस, समस्या आई: {str(last_error)}" if last_error else "जी बॉस, मैं सुन रही हूँ। बताइए, क्या आज्ञा है?"
 
 def stream_ai_response(user_input: str, history: list = None):
-    """Streams response tokens from Groq in real time with sub-second latency."""
+    """Streams response tokens from Groq in real time with automatic rate-limit fallback."""
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip() or HARDCODED_GROQ_KEY
-    model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
+    preferred_model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
 
     user_input = _prepare_user_input(user_input)
 
+    # Keep streaming history compact (last 3 turns) to protect daily token allowance
     history_messages = []
     if history:
-        for msg in history[-6:]:
+        for msg in history[-3:]:
             if msg.get("content") != user_input:
                 history_messages.append(msg)
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for msg in history_messages[-6:]:
+    for msg in history_messages[-3:]:
         messages.append(msg)
     messages.append({"role": "user", "content": user_input})
 
-    try:
-        completion = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=0.6,
-            max_tokens=350,
-            stream=True
-        )
-        for chunk in completion:
-            token = chunk.choices[0].delta.content or ""
-            if token:
-                yield token
-    except Exception as e:
-        print(f"[Stream Brain Error] {e}")
-        yield f" एरर: {str(e)}"
+    # Resilient multi-model fallback list
+    models_to_try = [preferred_model] + [m for m in AVAILABLE_GROQ_MODELS if m != preferred_model]
+
+    for m in models_to_try:
+        try:
+            extra = {"reasoning_format": "hidden"} if "gpt-oss" in m else {}
+            completion = client.chat.completions.create(
+                model=m,
+                messages=messages,
+                temperature=0.6,
+                max_tokens=600 if "gpt-oss" in m else 350,
+                stream=True,
+                extra_body=extra if extra else None
+            )
+
+            # Probe the first chunk to ensure stream connection is established without 429
+            chunk_iter = iter(completion)
+            first_chunk = next(chunk_iter, None)
+            if first_chunk:
+                tok = first_chunk.choices[0].delta.content or ""
+                if tok:
+                    yield tok
+            for chunk in chunk_iter:
+                token = chunk.choices[0].delta.content or ""
+                if token:
+                    yield token
+            return  # Successfully completed stream turn!
+        except Exception as e:
+            err_str = str(e).lower()
+            if "429" in err_str or "rate_limit" in err_str or "quota" in err_str:
+                print(f"[Brain Stream 429] Model {m} rate limited, falling back to next available model...")
+                continue
+            print(f"[Stream Brain Error on {m}] {e}")
+            yield f" एरर: {str(e)}"
+            return
+
+    yield " एरर: सभी मॉडल्स की लिमिट पूरी हो गई है, कृपया थोड़ी देर बाद प्रयास करें।"
