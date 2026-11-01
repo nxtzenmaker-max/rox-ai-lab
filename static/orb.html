@@ -107,6 +107,75 @@
   .photo-btn.secondary {
     background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2);
   }
+
+  /* Live Cyberpunk Terminal HUD Card */
+  .terminal-hud {
+    position: fixed;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 92%;
+    max-width: 480px;
+    background: rgba(10, 16, 28, 0.94);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(0, 242, 254, 0.45);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75), 0 0 25px rgba(0, 242, 254, 0.25);
+    border-radius: 12px;
+    z-index: 100;
+    padding: 10px 14px;
+    color: #fff;
+    font-family: 'Consolas', 'Courier New', monospace;
+    animation: termSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes termSlideDown {
+    from { opacity: 0; transform: translate(-50%, -15px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .terminal-hud-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+  .terminal-hud-dots { display: flex; gap: 5px; }
+  .terminal-hud-dots .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot.red { background: #ff5f56; }
+  .dot.yellow { background: #ffbd2e; }
+  .dot.green { background: #27c93f; }
+  .terminal-hud-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #00f2fe;
+  }
+  .terminal-hud-close {
+    background: none; border: none; color: #8892b0; font-size: 14px; cursor: pointer; padding: 0 4px;
+  }
+  .terminal-hud-close:hover { color: #fff; }
+  .terminal-hud-cmd {
+    font-size: 12px;
+    color: #a7f3d0;
+    font-weight: 600;
+    margin-bottom: 6px;
+    word-break: break-all;
+  }
+  .terminal-prompt { color: #38bdf8; font-weight: 700; margin-right: 4px; }
+  .terminal-hud-output {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.45;
+    color: #e2e8f0;
+    max-height: 180px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
 </style>
 </head>
 <body>
@@ -128,6 +197,21 @@
       <button class="photo-btn secondary" onclick="closePhotoModal()">DONE</button>
     </div>
   </div>
+</div>
+
+<!-- Live Cyberpunk Terminal HUD Card -->
+<div id="terminalHud" class="terminal-hud" style="display:none;">
+  <div class="terminal-hud-header">
+    <div class="terminal-hud-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="terminal-hud-title">⚡ VPS TERMINAL (48-CORE)</span>
+    <button class="terminal-hud-close" onclick="closeTerminalHud()">✕</button>
+  </div>
+  <div class="terminal-hud-cmd"><span class="terminal-prompt">$</span> <span id="terminalCmdText"></span></div>
+  <pre id="terminalOutputText" class="terminal-hud-output"></pre>
 </div>
 
 <div id="glow"></div>
@@ -816,9 +900,25 @@
     isSpeaking = false;
   }
 
+  function showTerminalHud(cmd, out) {
+    var hud = document.getElementById('terminalHud');
+    var cmdEl = document.getElementById('terminalCmdText');
+    var outEl = document.getElementById('terminalOutputText');
+    if (hud && cmdEl && outEl) {
+      cmdEl.innerText = cmd;
+      outEl.innerText = out;
+      hud.style.display = 'block';
+    }
+  }
+
+  function closeTerminalHud() {
+    var hud = document.getElementById('terminalHud');
+    if (hud) hud.style.display = 'none';
+  }
+
   function enqueueSentenceChunk(textChunk) {
-    // Strip action and emotion tags so TTS never speaks raw brackets
-    var clean = textChunk.replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
+    // Strip action, emotion and terminal tags so TTS NEVER speaks raw brackets, commands, or outputs!
+    var clean = textChunk.replace(/\[TERMINAL_VIEW:[\s\S]*?\]/gi, '').replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
     if (!clean) return;
 
     var chunkIndex = totalChunksCreated++;
@@ -1005,6 +1105,7 @@
     var currentSentence = "";
     var turnId = currentTurnId;
     var actionTriggered = false;
+    var terminalTriggered = false;
 
     // Detect Boss's explicit camera intent from what was spoken or typed
     var isBackIntent = /(back|rear|peeche|piche|peche|पीछे|बैक|रियर)/i.test(userMsg);
@@ -1084,8 +1185,20 @@
                 setEmotion(emo);
               }
 
-              var cleanSubtitle = fullReply.replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
+              var cleanSubtitle = fullReply.replace(/\[TERMINAL_VIEW:[\s\S]*?\]/gi, '').replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
               setSubtitle("ROX", cleanSubtitle, emo);
+
+              // Trigger live terminal HUD view if command was executed
+              var termMatch = fullReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
+              if (!terminalTriggered && termMatch) {
+                terminalTriggered = true;
+                try {
+                  var termData = JSON.parse(termMatch[1]);
+                  if (termData.cmd) {
+                    showTerminalHud(termData.cmd, termData.out || "");
+                  }
+                } catch(e) {}
+              }
 
               // Trigger photo capture command (front vs back) if requested by Boss
               var facingMatch = fullReply.match(/\[ACTION:\s*CAPTURE_PHOTO(?::(front|back))?\s*\]/i);
@@ -1129,6 +1242,17 @@
         capturePhotoAction(facing);
       }
 
+      // Safety fallback check if terminal view was requested
+      if (!terminalTriggered && /TERMINAL_VIEW/i.test(fullReply)) {
+        var tm = fullReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
+        if (tm) {
+          try {
+            var td = JSON.parse(tm[1]);
+            if (td.cmd) showTerminalHud(td.cmd, td.out || "");
+          } catch(e) {}
+        }
+      }
+
       // Flush any remaining sentence to TTS
       if (currentSentence.trim().length > 0) {
         enqueueSentenceChunk(currentSentence.trim());
@@ -1167,14 +1291,23 @@
         var fbReply = (fbData.reply || "").trim();
         if (fbReply) {
           var fbEmo = detectEmotion(fbReply);
-          setSubtitle("ROX", fbReply.replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim(), fbEmo);
+          var cleanFb = fbReply.replace(/\[TERMINAL_VIEW:[\s\S]*?\]/gi, '').replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
+          setSubtitle("ROX", cleanFb, fbEmo);
+
+          var termM = fbReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
+          if (termM) {
+            try {
+              var termD = JSON.parse(termM[1]);
+              if (termD.cmd) showTerminalHud(termD.cmd, termD.out || "");
+            } catch(e) {}
+          }
           
           if (/CAPTURE_PHOTO/i.test(fbReply)) {
             var facing = (isBackIntent && !isFrontIntent) ? 'back' : (/back/i.test(fbReply) ? 'back' : 'front');
             capturePhotoAction(facing);
           }
 
-          enqueueSentenceChunk(fbReply);
+          enqueueSentenceChunk(cleanFb);
           isStreamingDone = true;
           drainSequentialQueue(turnId);
           chatHistory.push({ role: "assistant", content: fbReply });

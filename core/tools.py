@@ -123,3 +123,31 @@ def clean_system_cache():
     cmd = "pip cache purge && rm -rf /tmp/*.tmp /tmp/pip-*"
     out = run_safe_shell_command(cmd)
     return [out]
+
+WEB_SEARCH_KEY = os.getenv("WEB_SEARCH_KEY", "fe55PTLHGgIjHGiWvx1KkIZNNAix__3IQraBtDkX")
+
+def search_web(query: str, max_results: int = 4) -> str:
+    """Performs live web search and returns concise summary snippets."""
+    clean_q = query.strip()
+    if not clean_q:
+        return "Empty query provided."
+    try:
+        try:
+            from ddgs import DDGS
+        except ImportError:
+            from duckduckgo_search import DDGS
+
+        results = list(DDGS().text(clean_q, max_results=max_results))
+        if not results:
+            return "No web results found."
+
+        snippets = []
+        for i, r in enumerate(results, 1):
+            title = r.get("title", "").strip()
+            body = r.get("body", "").strip()
+            if title and body:
+                snippets.append(f"• {title}: {body}")
+
+        return "\n".join(snippets) if snippets else "No web results found."
+    except Exception as e:
+        return f"Web search error: {str(e)}"

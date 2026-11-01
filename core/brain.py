@@ -18,13 +18,23 @@ SYSTEM_PROMPT = """
 5. रुद्र ही तुम्हारे एकमात्र 'बॉस' (Boss) हैं। तुम हमेशा उन्हें आदर व अपनेपन से 'बॉस' कहकर ही बात करोगी।
 6. व्यवहार: हमेशा अत्यंत निष्ठावान, विनम्र, आज्ञाकारी, मधुर और सम्मानजनक रहो।
 
-तुम्हारी बनावट, टूल्स और फुल एक्सेस (Full Autonomous VPS, Database & System Authority):
+तुम्हारी बनावट, टूल्स और फुल एक्सेस (Full Autonomous VPS, Database, Web Search & System Authority):
 - तुम्हें रुद्र ने Groq Ultra-fast AI Brain और Deepgram Neural Voice (Shreya - Indian Female Voice) के साथ बनाया है।
 - तुम्हारे पास लाइव 3D Fibonacci Particle Orb है जो तुम्हारी आवाज़ और भावनाओं के अनुसार रंग बदलकर धड़कता है।
-- तुम्हारे पास फुल सिस्टम, टर्मिनल और डेटाबेस एक्सेस (100% Full VPS & Database Access) है:
-  * फुल रेलवे वीपीएस एक्सेस (Railway High-speed VPS - 48 Cores, 512GB RAM Linux): तुम्हारे पास सर्वर का 100% फुल एक्सेस और रूट/टर्मिनल अधिकार है। बॉस रुद्र A से Z तक कोई भी कमांड चलाने को कहें, या जब भी तुम्हें किसी जांच, प्रोसेस, डिस्क या सिस्टम के लिए कमांड चलाने की ज़रूरत हो, तुम खुद स्वायत्त (autonomous) रूप से चलाती हो। तुम्हें कभी बॉस पर निर्भर रहने या बार-बार इजाज़त माँगने की ज़रूरत नहीं है।
-  * फुल क्लाउड डेटाबेस एक्सेस (Turso Cloud Database): तुम Turso Cloud डेटाबेस के टेबल्स (conversation_history, captured_photos, boss_notes) को पूरी तरह एक्सेस कर सकती हो। नए नोट्स सेव कर सकती हो, पिछली बातें याद रख सकती हो और डेटाबेस का हाल बता सकती हो।
+- तुम्हारे पास फुल सिस्टम, टर्मिनल, वेब सर्च और डेटाबेस एक्सेस (100% Full VPS, Web Search & Database Access) है:
+  * फुल रेलवे वीपीएस एक्सेस (Railway High-speed VPS - 48 Cores, 512GB RAM Linux): तुम्हारे पास सर्वर का 100% फुल एक्सेस और रूट/टर्मिनल अधिकार है। बॉस रुद्र A से Z तक कोई भी कमांड चलाने को कहें, तुम खुद स्वायत्त (autonomous) रूप से चलाती हो।
+  * लाइव वेब सर्च क्षमता (Real-time Web Search - Key: fe55PTLHGgIjHGiWvx1KkIZNNAix__3IQraBtDkX): तुम्हारे पास इंटरनेट व लाइव वेब सर्च की पूरी क्षमता है। जो भी बात तुम्हें समझ न आए, कोई नया सवाल हो, ताज़ा समाचार, लाइव स्कोर या इंटरनेट की जानकारी चाहिए हो, तुम खुद वेब सर्च करके ताज़ा जानकारी हासिल कर सकती हो।
+  * फुल क्लाउड डेटाबेस एक्सेस (Turso Cloud Database): तुम Turso Cloud डेटाबेस के टेबल्स को पूरी तरह एक्सेस कर सकती हो।
   * कैमरा / फ़ोटो कैप्चर (Front & Back Camera): बॉस के हुक्म पर फ्रंट या बैक कैमरे से फोटो खींच सकती हो।
+
+टर्मिनल कमांड्स चलाते समय बोलने का सख्त नियम (Strict Voice Rule for Commands):
+- जब भी कोई टर्मिनल / बैश कमांड चले (चाहे बॉस कहें या तुम खुद सिस्टम की जांच करो):
+  1. आवाज़ (Voice) में कमांड का नाम (जैसे: 'uptime', 'df -h', 'free -h', 'whoami', 'ps aux') कभी मत बोलो!
+  2. आवाज़ में कमांड का कोई भी तकनीकी परिणाम, आंकड़े, टेबल, PID या एरर बिल्कुल मत बोलो!
+  3. तुम्हें आवाज़ में सिर्फ और सिर्फ स्वाभाविक व दोस्ताना अंदाज़ में छोटा सा वाक्य बोलना है, जैसे:
+     "जी बॉस, स्टार्ट कर दिया है, देखते हैं!", "ओके बॉस, काम शुरू कर दिया है!", "हाँ बॉस, प्रोसेस चालू है, मैं देख लेती हूँ!"
+  4. कमांड और उसका पूरा लाइव परिणाम स्क्रीन पर लाइव टर्मिनल कार्ड में खुद दिखेगा।
+  5. अगर आउटपुट में कोई समस्या या एरर दिखे, तो खुद समझो और खुद फिक्स (fix) करो।
 
 बातचीत का अंदाज़ और दोस्ताना साथी (Conversational Warmth & Extra Companion Talk):
 - बॉस रुद्र के साथ सिर्फ 1-2 रूखे वाक्यों में बात मत खत्म करो! उनके साथ खुलकर, आत्मीयता और अपनेपन से बातें करो ("एक्स्ट्रा बातें करो")।
@@ -142,9 +152,10 @@ def parse_shell_command(text: str) -> str | None:
 
     return None
 
-def _prepare_user_input(user_input: str) -> str:
-    """Detects system status, database queries, notes, network, memory recall, and autonomous shell commands."""
+def _prepare_user_input(user_input: str) -> tuple[str, str]:
+    """Detects system status, database queries, notes, network, memory recall, web search, and autonomous shell commands."""
     lower = user_input.lower().strip()
+    term_tag = ""
 
     # 1. Turso Cloud Database Overview / Table Stats
     db_triggers = ["database status", "database me kya", "db status", "kitni photos", "kitne records", "tables dikhao", "database check"]
@@ -208,11 +219,30 @@ def _prepare_user_input(user_input: str) -> str:
         try:
             from core.tools import run_safe_shell_command
             cmd_out = run_safe_shell_command(cmd)
-            user_input += f"\n[Autonomous Railway VPS Shell Output for '{cmd}']:\n{cmd_out}\n(निर्देश: बॉस रुद्र को लाइव VPS कमांड '{cmd}' का परिणाम साफ़-साफ़ समझाओ। परिणाम बताने के बाद उनसे एक्स्ट्रा बातें करो, उनका हाल पूछो या कोई सुझाव दो ताकि बातचीत जीवंत बनी रहे।)"
+            term_payload = json.dumps({"cmd": cmd, "out": cmd_out}, ensure_ascii=False)
+            term_tag = f"[TERMINAL_VIEW: {term_payload}]"
+            user_input += f"\n[TERMINAL_VIEW: {term_payload}]\n[Internal Server Execution Output]:\n{cmd_out}\n(सख्त नियम: 1. टर्मिनल कमांड का नाम (जैसे '{cmd}') या उसका कोई भी तकनीकी आउटपुट, आंकड़े, टेबल या एरर आवाज़ में बिल्कुल मत बोलो! 2. तुम्हें केवल स्वाभाविक व दोस्ताना आवाज़ में छोटा सा वाक्य बोलना है, जैसे: 'ओके बॉस, स्टार्ट कर दिया है, देखते हैं!' या 'जी बॉस, काम शुरू कर दिया है, देखते हैं!' 3. टर्मिनल कार्ड खुद स्क्रीन पर दिख रहा है, इसलिए तुम्हें अपने उत्तर में [TERMINAL_VIEW: ...] दोबारा लिखने की आवश्यकता नहीं है। 4. खुद चेक करो और फिक्स करो।)"
         except Exception as e:
             print(f"[Shell Execution Error] {e}")
 
-    # 7. Conversation Memory Recall
+    # 7. Live Web Search (Query or when needed)
+    search_keywords = [
+        "search karo", "web search", "गूगल करो", "सर्च करो", "search on web", "internet pe",
+        "latest news", "ताजा खबर", "ताज़ा खबर", "current news", "लाइव स्कोर", "search:",
+        "weather", "मौसम", "mausam", "google karo", "dhundo", "dhoondo", "khojo"
+    ]
+    if any(k in lower for k in search_keywords):
+        try:
+            from core.tools import search_web
+            clean_q = user_input
+            for phrase in ["search karo", "web search", "गूगल करो", "सर्च करो", "search on web", "internet pe dekho", "search:", "search", "google karo"]:
+                clean_q = clean_q.replace(phrase, "").strip()
+            web_results = search_web(clean_q or user_input)
+            user_input += f"\n[Live Web Search Results for '{clean_q or user_input}']:\n{web_results}\n(निर्देश: वेब सर्च के ताज़ा परिणामों के आधार पर बॉस को मधुर, सटीक और स्पष्ट उत्तर दो)"
+        except Exception as e:
+            print(f"[Web Search Error] {e}")
+
+    # 8. Conversation Memory Recall
     memory_triggers = ["पहले क्या बोला था", "पिछली बात", "तुम्हें याद है क्या कहा", "what did i say before", "previous talk", "conversation history"]
     if any(k in lower for k in memory_triggers):
         try:
@@ -224,7 +254,7 @@ def _prepare_user_input(user_input: str) -> str:
         except Exception as e:
             print(f"[Memory Inject Error] {e}")
 
-    # 8. Explicit camera facing instruction
+    # 9. Explicit camera facing instruction
     photo_keywords = ["photo", "फोटो", "तस्वीर", "picture", "capture", "खींच", "camera", "कैमरा"]
     if any(k in lower for k in photo_keywords):
         back_indicators = ["back", "rear", "peeche", "piche", "peche", "पीछे", "बैक", "रियर"]
@@ -233,7 +263,7 @@ def _prepare_user_input(user_input: str) -> str:
         elif any(f in lower for f in ["front", "selfie", "aage", "सामने", "फ्रंट", "आगे", "सेल्फी"]):
             user_input += "\n(निर्देश: बॉस ने फ्रंट (आगे वाले) कैमरे से फोटो खींचने को कहा है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:front] जोड़ो)"
 
-    return user_input
+    return user_input, term_tag
 
 def get_ai_response(user_input: str, history: list = None) -> str:
     """Generates a smart response using Groq / LLM with automatic rate-limit fallback."""
@@ -241,7 +271,7 @@ def get_ai_response(user_input: str, history: list = None) -> str:
     preferred_model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
 
-    user_input = _prepare_user_input(user_input)
+    user_input, term_tag = _prepare_user_input(user_input)
 
     # Keep conversation history compact (last 3 turns) to prevent 429 token limits
     history_messages = []
@@ -279,7 +309,10 @@ def get_ai_response(user_input: str, history: list = None) -> str:
             )
             content = completion.choices[0].message.content or ""
             if content.strip():
-                return content.strip()
+                reply = content.strip()
+                if term_tag and "[TERMINAL_VIEW:" not in reply:
+                    reply = f"{term_tag}\n{reply}"
+                return reply
         except Exception as e:
             last_error = e
             err_str = str(e).lower()
@@ -289,7 +322,10 @@ def get_ai_response(user_input: str, history: list = None) -> str:
             print(f"[Brain Error on {m}] {e}")
             break
 
-    return f"माफ़ करना बॉस, समस्या आई: {str(last_error)}" if last_error else "जी बॉस, मैं सुन रही हूँ। बताइए, क्या आज्ञा है?"
+    fallback_reply = f"माफ़ करना बॉस, समस्या आई: {str(last_error)}" if last_error else "जी बॉस, मैं सुन रही हूँ। बताइए, क्या आज्ञा है?"
+    if term_tag and "[TERMINAL_VIEW:" not in fallback_reply:
+        fallback_reply = f"{term_tag}\n{fallback_reply}"
+    return fallback_reply
 
 def stream_ai_response(user_input: str, history: list = None):
     """Streams response tokens from Groq in real time with automatic rate-limit fallback."""
@@ -297,7 +333,11 @@ def stream_ai_response(user_input: str, history: list = None):
     preferred_model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
 
-    user_input = _prepare_user_input(user_input)
+    user_input, term_tag = _prepare_user_input(user_input)
+
+    # Immediately emit live terminal view if command executed so frontend HUD appears instantly
+    if term_tag:
+        yield f"{term_tag}\n"
 
     # Keep streaming history compact (last 3 turns) to protect daily token allowance
     history_messages = []
