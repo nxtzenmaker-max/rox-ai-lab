@@ -2,54 +2,322 @@
 <html lang="hi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>ROX Orb - AI Voice Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color:transparent; }
-  html,body{ margin:0; height:100%; overflow:hidden; background:#06030f radial-gradient(circle at 50% 50%,#170c33 0%,#06030f 72%); color:#fff; }
-  html.t,html.t body{ background:transparent!important; }
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html, body {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: #05040d radial-gradient(circle at 50% 38%, #160d33 0%, #05040d 75%);
+    color: #f8fafc;
+  }
+  html.t, html.t body { background: transparent !important; }
   
   /* Canvas & Glow */
-  canvas{ touch-action:none; position:fixed; inset:0; width:100vw; height:100vh; display:block; background:transparent; z-index:1; }
-  #glow{ position:fixed; left:50%; top:50%; width:80vmin; height:80vmin; margin:-40vmin 0 0 -40vmin; border-radius:50%; pointer-events:none; opacity:.3; filter:blur(10px); background:radial-gradient(circle,rgba(150,90,255,.38) 0%,rgba(255,80,175,.18) 40%,rgba(0,0,0,0) 68%); z-index:0; }
+  canvas {
+    touch-action: none;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    background: transparent;
+    z-index: 1;
+  }
+  #glow {
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    width: 85vmin;
+    height: 85vmin;
+    margin: -42.5vmin 0 0 -42.5vmin;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0.35;
+    filter: blur(40px);
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(0, 242, 254, 0.15) 45%, rgba(0, 0, 0, 0) 70%);
+    z-index: 0;
+    transition: opacity 0.5s ease;
+  }
 
   /* UI Layer (HUD) */
-  .hud-layer { position:fixed; inset:0; z-index:10; pointer-events:none; display:flex; flex-direction:column; justify-content:space-between; padding:24px 20px; }
+  .hud-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px;
+  }
   
   /* Top Bar */
-  .top-bar { display:flex; justify-content:space-between; align-items:center; width:100%; }
-  .logo-badge { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.06); padding:8px 16px; border-radius:30px; border:1px solid rgba(255,255,255,0.12); backdrop-filter:blur(12px); }
-  .status-dot { width:8px; height:8px; border-radius:50%; background:#00f2fe; box-shadow:0 0 10px #00f2fe; animation:pulse-dot 2s infinite; }
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+    pointer-events: auto;
+  }
+  .logo-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 16px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00f2fe;
+    box-shadow: 0 0 10px #00f2fe;
+    animation: pulse-dot 2s infinite;
+  }
   @keyframes pulse-dot { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:0.4; transform:scale(0.8);} }
-  .logo-text { font-size:14px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; background:linear-gradient(90deg,#00f2fe,#965aff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .logo-text {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    background: linear-gradient(135deg, #00f2fe 0%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
   
-  .tech-badge { font-size:11px; color:#a1a1aa; background:rgba(15,23,42,0.6); padding:6px 12px; border-radius:20px; border:1px solid rgba(255,255,255,0.08); backdrop-filter:blur(10px); }
+  /* Status Pill */
+  .status-pill {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    background: rgba(0, 242, 254, 0.12);
+    color: #38bdf8;
+    border: 1px solid rgba(0, 242, 254, 0.28);
+    white-space: nowrap;
+    transition: all 0.25s ease;
+  }
+  .status-pill.speaking {
+    background: rgba(236, 72, 153, 0.16);
+    color: #f472b6;
+    border-color: rgba(236, 72, 153, 0.4);
+    box-shadow: 0 0 12px rgba(236, 72, 153, 0.3);
+  }
+  .status-pill.thinking {
+    background: rgba(234, 179, 8, 0.16);
+    color: #facc15;
+    border-color: rgba(234, 179, 8, 0.4);
+    box-shadow: 0 0 12px rgba(234, 179, 8, 0.3);
+  }
+  .status-pill.listening {
+    background: rgba(0, 242, 254, 0.2);
+    color: #00f2fe;
+    border-color: rgba(0, 242, 254, 0.5);
+    box-shadow: 0 0 14px rgba(0, 242, 254, 0.35);
+  }
 
-  /* Subtitles & Status */
-  .center-display { display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom:20px; pointer-events:auto; }
-  .status-label { font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:#965aff; margin-bottom:12px; transition:all 0.3s; }
-  .status-label.listening { color:#00f2fe; text-shadow:0 0 12px rgba(0,242,254,0.6); }
-  .status-label.speaking { color:#ff50af; text-shadow:0 0 12px rgba(255,80,175,0.6); }
-  .status-label.thinking { color:#facc15; text-shadow:0 0 12px rgba(250,204,21,0.6); }
+  .tech-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 14px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
 
-  .subtitles-box { max-width:620px; width:90vw; min-height:56px; padding:14px 22px; background:rgba(10,8,22,0.72); border:1px solid rgba(150,90,255,0.25); border-radius:20px; backdrop-filter:blur(18px); box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; }
-  .subtitles-text { font-size:15px; line-height:1.5; color:#f1f5f9; font-weight:400; transition:opacity 0.2s; }
-  .subtitles-text .speaker { font-weight:700; margin-right:6px; color:#00f2fe; }
+  /* Subtitle Card (Uncongested, Luxurious Response Card) */
+  .subtitles-box {
+    max-width: 600px;
+    width: 100%;
+    margin: 0 auto 18px auto;
+    padding: 18px 24px;
+    background: rgba(13, 17, 32, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 26px;
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65), 0 0 24px rgba(0, 242, 254, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 180px;
+    overflow-y: auto;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: auto;
+  }
+  .subtitles-box::-webkit-scrollbar {
+    width: 4px;
+  }
+  .subtitles-box::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .subtitles-box::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 4px;
+  }
+  .sub-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .speaker-pill {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 12px;
+  }
+  .speaker-pill.speaker-rox {
+    background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(168, 85, 247, 0.25));
+    color: #38bdf8;
+    border: 1px solid rgba(0, 242, 254, 0.45);
+    box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);
+  }
+  .speaker-pill.speaker-boss {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .sub-emo {
+    font-size: 12px;
+    font-weight: 700;
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .sub-body {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.7;
+    color: #f8fafc;
+    letter-spacing: 0.3px;
+    word-break: break-word;
+  }
 
   /* Controls (Bottom Bar) */
-  .bottom-controls { display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; pointer-events:auto; }
+  .bottom-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    pointer-events: auto;
+  }
   
-  .mic-button-wrap { position:relative; }
-  .mic-button { width:68px; height:68px; border-radius:50%; border:none; background:linear-gradient(135deg, #965aff, #ff50af); color:#fff; font-size:26px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 0 25px rgba(150,90,255,0.5); transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-  .mic-button:hover { transform:scale(1.08); box-shadow:0 0 35px rgba(255,80,175,0.8); }
-  .mic-button.active { background:linear-gradient(135deg, #00f2fe, #965aff); box-shadow:0 0 35px rgba(0,242,254,0.9); animation:pulse-mic 1.5s infinite; }
-  @keyframes pulse-mic { 0%,100%{transform:scale(1);} 50%{transform:scale(1.1);} }
+  .mic-button-wrap {
+    position: relative;
+    margin-bottom: 16px;
+  }
+  .mic-button {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #00f2fe 0%, #9333ea 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 30px rgba(0, 242, 254, 0.35), 0 0 20px rgba(147, 51, 234, 0.35);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  .mic-button:hover {
+    transform: scale(1.06);
+    box-shadow: 0 12px 35px rgba(0, 242, 254, 0.5), 0 0 30px rgba(236, 72, 153, 0.5);
+  }
+  .mic-button:active {
+    transform: scale(0.96);
+  }
+  .mic-button.active {
+    background: linear-gradient(135deg, #00f2fe, #ec4899);
+    box-shadow: 0 0 35px rgba(0, 242, 254, 0.8), 0 0 50px rgba(236, 72, 153, 0.5);
+    animation: pulse-mic 1.6s infinite;
+  }
+  @keyframes pulse-mic { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
 
-  .input-bar { display:flex; width:100%; max-width:440px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:30px; padding:4px 6px 4px 18px; backdrop-filter:blur(15px); }
-  .input-bar input { flex:1; background:transparent; border:none; outline:none; color:#fff; font-size:14px; }
-  .input-bar input::placeholder { color:rgba(255,255,255,0.4); }
-  .send-btn { background:#965aff; border:none; color:#fff; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:0.2s; }
-  .send-btn:hover { background:#ff50af; }
+  .input-bar {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 52px;
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 0 6px 0 22px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .input-bar:focus-within {
+    border-color: rgba(0, 242, 254, 0.5);
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
+  }
+  .input-bar input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .input-bar input::placeholder {
+    color: rgba(255, 255, 255, 0.42);
+    font-weight: 400;
+  }
+  .send-btn {
+    background: linear-gradient(135deg, #00f2fe, #9333ea);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .send-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
+  }
+  .send-btn:active {
+    transform: scale(0.95);
+  }
 
   /* Camera Shutter Flash */
   .camera-flash {
@@ -222,16 +490,16 @@
   <div class="top-bar">
     <div class="logo-badge">
       <div class="status-dot"></div>
-      <span class="logo-text">ROX ORB</span>
-      <span id="statusLabel" class="status-label" style="display:none; margin:0 0 0 6px; font-size:10px; font-weight:700;"></span>
+      <span class="logo-text">ROX AI</span>
+      <span id="statusLabel" class="status-pill online">ONLINE</span>
     </div>
-    <div class="tech-badge">Groq Ultra • Parallel AI • Deepgram Aura</div>
+    <div class="tech-badge">⚡ 48-CORE VPS</div>
   </div>
 
   <!-- Bottom Controls & Subtitles -->
   <div class="bottom-controls">
-    <div id="subtitlesBox" class="subtitles-box" style="display:none; margin-bottom:10px;">
-      <div id="subtitlesText" class="subtitles-text"></div>
+    <div id="subtitlesBox" class="subtitles-box" style="display:none;">
+      <div id="subtitlesText"></div>
     </div>
 
     <div class="mic-button-wrap">
@@ -497,10 +765,17 @@
   var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   function resize(){
     var w = Math.floor(window.innerWidth * dpr), h = Math.floor(window.innerHeight * dpr);
-    var s = Math.min(w, h);
     canvas.width = w; canvas.height = h;
-    gl.viewport((w - s) / 2, (h - s) / 2, s, s);
-    gl.uniform1f(uSize, Math.max(2.2, (s / dpr) / 120));
+
+    var isPortrait = h > w;
+    // In mobile portrait, keep orb slightly more compact and float it gracefully in upper-middle
+    var s = isPortrait ? Math.floor(w * 0.76) : Math.floor(Math.min(w, h) * 0.88);
+    var x = Math.floor((w - s) / 2);
+    // In WebGL viewport, y=0 is bottom; 0.58-0.60 places orb in the comfortable upper-middle
+    var y = isPortrait ? Math.floor((h - s) * 0.58) : Math.floor((h - s) / 2);
+
+    gl.viewport(x, y, s, s);
+    gl.uniform1f(uSize, Math.max(2.0, (s / dpr) / 120));
   }
   window.addEventListener('resize', resize);
   resize();
@@ -643,14 +918,32 @@
   var isSpeaking = false;
   var recognition = null;
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>'"]/g, function(tag) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+      }[tag] || tag);
+    });
+  }
+
   function setStatus(text, type){
+    if (!statusLabel) return;
     if(!text || text === "READY" || text.includes("TAP TO TALK")){
-      statusLabel.style.display = 'none';
+      statusLabel.innerText = "ONLINE";
+      statusLabel.className = 'status-pill online';
       return;
     }
-    statusLabel.style.display = 'inline-block';
-    statusLabel.innerText = "• " + text;
-    statusLabel.className = 'status-label ' + (type || '');
+    var clean = text;
+    if (clean.includes("LISTENING")) clean = "LISTENING";
+    else if (clean.includes("THINKING")) clean = "THINKING";
+    else if (clean.includes("SPEAKING")) clean = "SPEAKING";
+    statusLabel.innerText = clean;
+    statusLabel.className = 'status-pill ' + (type || clean.toLowerCase());
   }
 
   var subtitlesBox = document.getElementById('subtitlesBox');
@@ -660,15 +953,26 @@
       return;
     }
     if(subtitlesBox) subtitlesBox.style.display = 'flex';
+    var isRox = speaker === 'ROX';
     var emoBadge = '';
-    if (speaker === 'ROX' && emotion && emotion !== 'neutral') {
-      if (emotion === 'laugh') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#f59e0b;">😄 (हँसी)</span>';
-      else if (emotion === 'cry') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#38bdf8;">😢 (भावुक)</span>';
-      else if (emotion === 'sing') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#e879f9;">🎵 (गाना)</span>';
-      else if (emotion === 'love') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#fb7185;">💖 (प्यार)</span>';
-      else if (emotion === 'excited') emoBadge = ' <span style="font-size:12px;font-weight:700;color:#34d399;">✨ (उत्साह)</span>';
+    if (isRox && emotion && emotion !== 'neutral') {
+      if (emotion === 'laugh') emoBadge = '<span class="sub-emo">😄 हँसी</span>';
+      else if (emotion === 'cry') emoBadge = '<span class="sub-emo">😢 भावुक</span>';
+      else if (emotion === 'sing') emoBadge = '<span class="sub-emo">🎵 गीत</span>';
+      else if (emotion === 'love') emoBadge = '<span class="sub-emo">💖 प्रेम</span>';
+      else if (emotion === 'excited') emoBadge = '<span class="sub-emo">✨ उत्साह</span>';
     }
-    subtitlesText.innerHTML = `<span class="speaker">${speaker}${emoBadge}:</span> "${text}"`;
+    var speakerClass = isRox ? 'speaker-rox' : 'speaker-boss';
+    var speakerLabel = isRox ? 'ROX' : 'BOSS';
+
+    subtitlesText.innerHTML = `
+      <div class="sub-header">
+        <span class="speaker-pill ${speakerClass}">${speakerLabel}</span>
+        ${emoBadge}
+      </div>
+      <div class="sub-body">${escapeHtml(text)}</div>
+    `;
+    subtitlesBox.scrollTop = subtitlesBox.scrollHeight;
   }
 
   /* ---------- STRICT ORDERED SEQUENTIAL AUDIO ENGINE ---------- */
