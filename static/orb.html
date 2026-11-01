@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ROX Orb - AI Voice Assistant</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; overflow:hidden; background:#06030f radial-gradient(circle at 50% 50%,#170c33 0%,#06030f 72%); color:#fff; }
+  html.t,html.t body{ background:transparent!important; }
+  
+  /* Canvas & Glow */
+  canvas{ touch-action:none; position:fixed; inset:0; width:100vw; height:100vh; display:block; background:transparent; z-index:1; }
+  #glow{ position:fixed; left:50%; top:50%; width:80vmin; height:80vmin; margin:-40vmin 0 0 -40vmin; border-radius:50%; pointer-events:none; opacity:.3; filter:blur(10px); background:radial-gradient(circle,rgba(150,90,255,.38) 0%,rgba(255,80,175,.18) 40%,rgba(0,0,0,0) 68%); z-index:0; }
+
+  /* UI Layer (HUD) */
+  .hud-layer { position:fixed; inset:0; z-index:10; pointer-events:none; display:flex; flex-direction:column; justify-content:space-between; padding:24px 20px; }
+  
+  /* Top Bar */
+  .top-bar { display:flex; justify-content:space-between; align-items:center; width:100%; }
+  .logo-badge { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.06); padding:8px 16px; border-radius:30px; border:1px solid rgba(255,255,255,0.12); backdrop-filter:blur(12px); }
+  .status-dot { width:8px; height:8px; border-radius:50%; background:#00f2fe; box-shadow:0 0 10px #00f2fe; animation:pulse-dot 2s infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:0.4; transform:scale(0.8);} }
+  .logo-text { font-size:14px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; background:linear-gradient(90deg,#00f2fe,#965aff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  
+  .tech-badge { font-size:11px; color:#a1a1aa; background:rgba(15,23,42,0.6); padding:6px 12px; border-radius:20px; border:1px solid rgba(255,255,255,0.08); backdrop-filter:blur(10px); }
+
+  /* Subtitles & Status */
+  .center-display { display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom:20px; pointer-events:auto; }
+  .status-label { font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:#965aff; margin-bottom:12px; transition:all 0.3s; }
+  .status-label.listening { color:#00f2fe; text-shadow:0 0 12px rgba(0,242,254,0.6); }
+  .status-label.speaking { color:#ff50af; text-shadow:0 0 12px rgba(255,80,175,0.6); }
+  .status-label.thinking { color:#facc15; text-shadow:0 0 12px rgba(250,204,21,0.6); }
+
+  .subtitles-box { max-width:620px; width:90vw; min-height:56px; padding:14px 22px; background:rgba(10,8,22,0.72); border:1px solid rgba(150,90,255,0.25); border-radius:20px; backdrop-filter:blur(18px); box-shadow:0 8px 32px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; }
+  .subtitles-text { font-size:15px; line-height:1.5; color:#f1f5f9; font-weight:400; transition:opacity 0.2s; }
+  .subtitles-text .speaker { font-weight:700; margin-right:6px; color:#00f2fe; }
+
+  /* Controls (Bottom Bar) */
+  .bottom-controls { display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; pointer-events:auto; }
+  
+  .mic-button-wrap { position:relative; }
+  .mic-button { width:68px; height:68px; border-radius:50%; border:none; background:linear-gradient(135deg, #965aff, #ff50af); color:#fff; font-size:26px; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 0 25px rgba(150,90,255,0.5); transition:all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .mic-button:hover { transform:scale(1.08); box-shadow:0 0 35px rgba(255,80,175,0.8); }
+  .mic-button.active { background:linear-gradient(135deg, #00f2fe, #965aff); box-shadow:0 0 35px rgba(0,242,254,0.9); animation:pulse-mic 1.5s infinite; }
+  @keyframes pulse-mic { 0%,100%{transform:scale(1);} 50%{transform:scale(1.1);} }
+
+  .input-bar { display:flex; width:100%; max-width:440px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:30px; padding:4px 6px 4px 18px; backdrop-filter:blur(15px); }
+  .input-bar input { flex:1; background:transparent; border:none; outline:none; color:#fff; font-size:14px; }
+  .input-bar input::placeholder { color:rgba(255,255,255,0.4); }
+  .send-btn { background:#965aff; border:none; color:#fff; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:0.2s; }
+  .send-btn:hover { background:#ff50af; }
+</style>
+</head>
+<body>
+
+<div id="glow"></div>
+<canvas id="c"></canvas>
+
+<div class="hud-layer">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="logo-badge">
+      <div class="status-dot"></div>
+      <span class="logo-text">ROX ORB</span>
+      <span id="statusLabel" class="status-label" style="display:none; margin:0 0 0 6px; font-size:10px; font-weight:700;"></span>
+    </div>
+    <div class="tech-badge">Groq 120B • Deepgram Aura</div>
+  </div>
+
+  <!-- Bottom Controls & Subtitles -->
+  <div class="bottom-controls">
+    <div id="subtitlesBox" class="subtitles-box" style="display:none; margin-bottom:10px;">
+      <div id="subtitlesText" class="subtitles-text"></div>
+    </div>
+
+    <div class="mic-button-wrap">
+      <button id="micBtn" class="mic-button" title="Tap to Talk">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </button>
+    </div>
+
+    <form id="textForm" class="input-bar" onsubmit="event.preventDefault(); submitText();">
+      <input id="textInput" type="text" placeholder="Type a message or command..." autocomplete="off">
+      <button type="submit" class="send-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  var canvas = document.getElementById('c');
+  var gl = canvas.getContext('webgl2', {alpha:true, premultipliedAlpha:true, antialias:true});
+  if(!gl){ document.body.textContent='WebGL2 not supported'; return; }
+
+  if(/transparent/.test(location.search + location.hash)) document.documentElement.classList.add('t');
+  var NB = 32;               // frequency bands
+  var SPHERE_N = 3200;       // sphere dots
+
+  /* ---------- geometry: fibonacci sphere dots + ring dots ---------- */
+  var data = [];
+  var ga = Math.PI * (3 - Math.sqrt(5));
+  for (var i = 0; i < SPHERE_N; i++) {
+    var y = 1 - (i / (SPHERE_N - 1)) * 2;
+    var r = Math.sqrt(1 - y * y);
+    var t = ga * i;
+    data.push(Math.cos(t) * r, y, Math.sin(t) * r, 0);
+  }
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+
+  /* ---------- shaders ---------- */
+  var vs = '#version 300 es\n' +
+  'precision highp float;\n' +
+  'in vec3 aPos; in float aType;\n' +
+  'uniform float uBands[' + NB + '];\n' +
+  'uniform float uTime, uLevel, uDpr, uSize, uScale;\n' +
+  'uniform vec3 uColA, uColB, uColC;\n' +
+  'uniform float uGlow;\n' +
+  'uniform vec4 uTouch;\n' +
+  'out vec4 vCol;\n' +
+  'float band(float t){ float f=clamp(t,0.,1.)*float(' + (NB - 1) + '); int a=int(floor(f)); int b=min(a+1,' + (NB - 1) + '); return mix(uBands[a],uBands[b],fract(f)); }\n' +
+  'void main(){\n' +
+  '  vec3 p; float size; float alpha; float rim = 0.0;\n' +
+  '  float h = fract(sin(dot(aPos, vec3(12.9898,78.233,37.719)))*43758.5453);\n' +
+  '  if(aType < 0.5){\n' +
+  '    float lon = abs(atan(aPos.x, aPos.z)) / 3.14159265;\n' +
+  '    float lat = abs(aPos.y);\n' +
+  '    float e = band(mix(lon, lat, 0.35));\n' +
+  '    float ripple = 0.5 + 0.5*sin(uTime*0.3 + aPos.y*7.0 + aPos.x*3.0);\n' +
+  '    float d = e*0.055*(0.7+0.3*ripple);\n' +
+  '    p = aPos*(0.80 + d)*uScale;\n' +
+  '    float ay = uTime*0.02;\n' +
+  '    float ax = sin(uTime*0.08)*0.03;\n' +
+  '    float cy=cos(ay), sy=sin(ay);\n' +
+  '    p = vec3(cy*p.x + sy*p.z, p.y, -sy*p.x + cy*p.z);\n' +
+  '    float cx=cos(ax), sx=sin(ax);\n' +
+  '    p = vec3(p.x, cx*p.y - sx*p.z, sx*p.y + cx*p.z);\n' +
+  '    float age = clamp(uTime - uTouch.z, 0.0, 6.0);\n' +
+  '    float dist = length(p.xy - uTouch.xy);\n' +
+  '    float wave = sin(dist*12.0 - age*8.0) * exp(-dist*2.0) * exp(-age*1.6) * uTouch.w;\n' +
+  '    p *= 1.0 + wave*0.08;\n' +
+  '    float depth = p.z*0.5+0.5;\n' +
+  '    size = uSize*(0.75+0.55*depth)*(1.0+e*0.5);\n' +
+  '    alpha = 0.25 + 0.75*depth;\n' +
+  '    alpha *= 0.65 + e*0.6;\n' +
+  '    rim = pow(1.0 - clamp(abs(p.z)/(0.8*uScale),0.,1.), 2.0);\n' +
+  '    alpha *= 0.75 + 0.25*sin(uTime*1.3 + h*40.0);\n' +
+  '    alpha += rim*0.35;\n' +
+  '    size *= 1.0 + rim*0.3;\n' +
+  '    if(h > 0.97) size *= 1.8;\n' +
+  '  } else {\n' +
+  '    float a = aPos.x;\n' +
+  '    float m = abs(a/3.14159265 - 1.0);\n' +
+  '    float e = band(m);\n' +
+  '    float rad = (1.02 + e*0.16)*mix(1.0, uScale, 0.6);\n' +
+  '    p = vec3(cos(a)*rad, sin(a)*rad, 0.0);\n' +
+  '    size = uSize*(0.9+e*1.1);\n' +
+  '    alpha = 0.45 + e*0.55;\n' +
+  '  }\n' +
+  '  alpha = clamp(alpha, 0.0, 1.0);\n' +
+  '  float g = smoothstep(-0.9, 0.9, p.y + sin(uTime*0.15 + p.x)*0.25);\n' +
+  '  vec3 col = mix(uColA, uColB, g);\n' +
+  '  col = mix(col, uColC, clamp(rim*0.7 + uGlow*0.35, 0.0, 1.0));\n' +
+  '  col += vec3(rim*0.25 + uGlow*0.15);\n' +
+  '  col = mix(col, vec3(1.0), step(0.97, h)*0.6);\n' +
+  '  vCol = vec4(col*alpha, alpha);\n' +
+  '  gl_Position = vec4(p.xy*0.76, 0.0, 1.0);\n' +
+  '  gl_PointSize = size*uDpr;\n' +
+  '}\n';
+
+  var fs = '#version 300 es\n' +
+  'precision highp float;\n' +
+  'in vec4 vCol; out vec4 o;\n' +
+  'void main(){\n' +
+  '  vec2 c = gl_PointCoord*2.0-1.0;\n' +
+  '  float d = dot(c,c);\n' +
+  '  if(d>1.0) discard;\n' +
+  '  float a = smoothstep(1.0,0.35,d);\n' +
+  '  o = vCol*a;\n' +
+  '}\n';
+
+  function sh(type, src){
+    var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+
+  var vao = gl.createVertexArray();
+  gl.bindVertexArray(vao);
+  var aPos = gl.getAttribLocation(prog, 'aPos');
+  var aType = gl.getAttribLocation(prog, 'aType');
+  gl.enableVertexAttribArray(aPos);  gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 16, 0);
+  gl.enableVertexAttribArray(aType); gl.vertexAttribPointer(aType, 1, gl.FLOAT, false, 16, 12);
+
+  var uBands = gl.getUniformLocation(prog, 'uBands[0]');
+  var uTime  = gl.getUniformLocation(prog, 'uTime');
+  var uLevel = gl.getUniformLocation(prog, 'uLevel');
+  var uDpr   = gl.getUniformLocation(prog, 'uDpr');
+  var uSize  = gl.getUniformLocation(prog, 'uSize');
+  var uColA = gl.getUniformLocation(prog, 'uColA');
+  var uColB = gl.getUniformLocation(prog, 'uColB');
+  var uColC = gl.getUniformLocation(prog, 'uColC');
+  var uGlow = gl.getUniformLocation(prog, 'uGlow');
+  var uTouch = gl.getUniformLocation(prog, 'uTouch');
+  var glowEl = document.getElementById('glow');
+  var uScale = gl.getUniformLocation(prog, 'uScale');
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  gl.clearColor(0, 0, 0, 0);
+
+  /* ---------- audio setup ---------- */
+  var audioCtx = null;
+  var analyser = null, fft = null;
+  var bands = new Float32Array(NB);
+  var target = new Float32Array(NB);
+  var ttsAudioElem = new Audio();
+  var ttsSource = null;
+  var micStream = null, micSource = null;
+
+  function ensureAudioCtx(){
+    if(!audioCtx){
+      var AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.82;
+      fft = new Uint8Array(analyser.frequencyBinCount);
+
+      // Connect tts audio element ONLY to destination and analyser
+      // NEVER connect analyser to destination to prevent mic echo!
+      ttsSource = audioCtx.createMediaElementSource(ttsAudioElem);
+      ttsSource.connect(analyser);
+      ttsSource.connect(audioCtx.destination);
+    }
+    if(audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+  }
+
+  function setupMic(){
+    ensureAudioCtx();
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    if(micStream) return; // already running
+
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+      micStream = stream;
+      micSource = audioCtx.createMediaStreamSource(stream);
+      // Connect mic to analyser only when user speaks (no loop to destination)
+      micSource.connect(analyser);
+    }).catch(function(e){ console.log("Mic access error:", e); });
+  }
+
+  window.addEventListener('pointerdown', ensureAudioCtx, {once:true});
+
+  // External hook
+  var external = null;
+  window.setOrbLevels = function(a){ external = a; };
+
+  /* ---------- update bands (frequencies) ---------- */
+  function updateBands(t){
+    if(external){
+      for(var i=0;i<NB;i++) target[i] = external[i] || 0;
+    } else if(analyser && fft){
+      analyser.getByteFrequencyData(fft);
+      var usable = Math.floor(fft.length * 0.55);
+      for(var b=0;b<NB;b++){
+        var lo = Math.floor(Math.pow(b/NB, 1.6) * usable);
+        var hi = Math.max(lo+1, Math.floor(Math.pow((b+1)/NB, 1.6) * usable));
+        var s = 0; for(var k=lo;k<hi;k++) s += fft[k];
+        target[b] = Math.min(1, (s/(hi-lo)/255) * 1.5);
+      }
+    } else {
+      // Idle shimmering pulse
+      for(var q=0;q<NB;q++){
+        target[q] = 0.16 + 0.12*Math.sin(t*1.7 + q*0.55) + 0.08*Math.sin(t*3.1 + q*1.3);
+      }
+    }
+    var lvl = 0;
+    for(var i2=0;i2<NB;i2++){
+      var tv = target[i2];
+      var k2 = tv > bands[i2] ? 0.28 : 0.09;
+      bands[i2] += (tv - bands[i2]) * k2;
+      lvl += bands[i2];
+    }
+    return lvl / NB;
+  }
+
+  /* ---------- resize & uniforms ---------- */
+  var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  function resize(){
+    var w = Math.floor(window.innerWidth * dpr), h = Math.floor(window.innerHeight * dpr);
+    var s = Math.min(w, h);
+    canvas.width = w; canvas.height = h;
+    gl.viewport((w - s) / 2, (h - s) / 2, s, s);
+    gl.uniform1f(uSize, Math.max(2.2, (s / dpr) / 120));
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  gl.uniform1f(uDpr, dpr);
+  gl.uniform3f(uColA, 0.52, 0.35, 1.00);   // violet
+  gl.uniform3f(uColB, 1.00, 0.32, 0.72);   // pink
+  gl.uniform3f(uColC, 0.25, 0.88, 1.00);   // cyan
+
+  var scale = 1.0, glow = 0.0;
+  var touchX = 0, touchY = 0, touchT = -100, touchS = 0, lastHit = 0;
+
+  function hit(e){
+    if(e.type === 'pointermove' && e.pointerType === 'mouse' && !e.buttons) return;
+    var now = performance.now();
+    if(e.type === 'pointermove' && now - lastHit < 90) return;
+    var half = Math.min(window.innerWidth, window.innerHeight) / 2;
+    var u = (e.clientX - window.innerWidth / 2) / (half * 0.76);
+    var v = -(e.clientY - window.innerHeight / 2) / (half * 0.76);
+    if (Math.sqrt(u * u + v * v) > 0.83 * scale) return;
+    lastHit = now;
+    touchX = u; touchY = v; touchT = (now - t0) / 1000;
+    touchS = e.type === 'pointerdown' ? 1.0 : 0.6;
+    glow = Math.min(1, glow + 0.35);
+
+    // If tapped on orb and not speaking, trigger call
+    if(e.type === 'pointerdown' && !isSpeaking && !isCallActive){
+      toggleCall();
+    }
+  }
+  window.addEventListener('pointerdown', hit);
+  window.addEventListener('pointermove', hit);
+
+  var t0 = performance.now();
+  function frame(now){
+    var t = (now - t0) / 1000;
+    var level = updateBands(t);
+    var sTarget = 1.0 + level * 0.22;
+    scale += (sTarget - scale) * (sTarget > scale ? 0.09 : 0.04);
+    gl.uniform1f(uScale, scale);
+    glow += (Math.min(1, level * 2.2) - glow) * 0.06;
+    gl.uniform1f(uGlow, glow);
+    gl.uniform4f(uTouch, touchX, touchY, touchT, touchS);
+    glowEl.style.opacity = (0.3 + 0.55 * glow).toFixed(3);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform1fv(uBands, bands);
+    gl.uniform1f(uTime, t);
+    gl.uniform1f(uLevel, level);
+    gl.drawArrays(gl.POINTS, 0, SPHERE_N);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* =======================================================
+     GROQ LLM + DEEPGRAM AURA TTS VOICE INTEGRATION
+     ======================================================= */
+  var statusLabel = document.getElementById('statusLabel');
+  var subtitlesText = document.getElementById('subtitlesText');
+  var micBtn = document.getElementById('micBtn');
+  var textInput = document.getElementById('textInput');
+  var chatHistory = [];
+  var isListening = false;
+  var isSpeaking = false;
+  var recognition = null;
+
+  function setStatus(text, type){
+    if(!text || text === "READY" || text.includes("TAP TO TALK")){
+      statusLabel.style.display = 'none';
+      return;
+    }
+    statusLabel.style.display = 'inline-block';
+    statusLabel.innerText = "• " + text;
+    statusLabel.className = 'status-label ' + (type || '');
+  }
+
+  var subtitlesBox = document.getElementById('subtitlesBox');
+  function setSubtitle(speaker, text){
+    if(!text || !text.trim()){
+      if(subtitlesBox) subtitlesBox.style.display = 'none';
+      return;
+    }
+    if(subtitlesBox) subtitlesBox.style.display = 'flex';
+    subtitlesText.innerHTML = `<span class="speaker">${speaker}:</span> "${text}"`;
+  }
+
+  /* ---------- LIVE STREAMING TTS & AUDIO QUEUE ENGINE ---------- */
+  var nextPlayTime = 0;
+  var activeSources = [];
+  var isAudioStreaming = false;
+
+  function stopAllSpeechAudio() {
+    activeSources.forEach(function(s) {
+      try { s.stop(); } catch(e){}
+    });
+    activeSources = [];
+    nextPlayTime = 0;
+    isSpeaking = false;
+  }
+
+  async function queueAndPlayAudio(textChunk, isFinalChunk) {
+    if (!textChunk || !textChunk.trim()) return;
+    ensureAudioCtx();
+
+    try {
+      var resp = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textChunk })
+      });
+      if (!resp.ok) return;
+
+      var arrayBuf = await resp.arrayBuffer();
+      var audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+
+      scheduleAudioBuffer(audioBuf, isFinalChunk);
+    } catch(err) {
+      console.warn("Live TTS Chunk Error:", err);
+    }
+  }
+
+  function scheduleAudioBuffer(buffer, isFinalChunk) {
+    ensureAudioCtx();
+    isSpeaking = true;
+    setStatus("SPEAKING...", "speaking");
+    glow = 0.8;
+
+    var source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(analyser); // Drives the WebGL Orb visualizer
+    source.connect(audioCtx.destination); // Plays out of loudspeaker
+
+    var now = audioCtx.currentTime;
+    var startTime = Math.max(now, nextPlayTime);
+    source.start(startTime);
+    nextPlayTime = startTime + buffer.duration;
+
+    activeSources.push(source);
+
+    source.onended = function() {
+      var idx = activeSources.indexOf(source);
+      if (idx > -1) activeSources.splice(idx, 1);
+
+      // If all scheduled chunks have finished playing
+      if (activeSources.length === 0 && (!isAudioStreaming || isFinalChunk)) {
+        isSpeaking = false;
+        setStatus("READY", "");
+        if (isCallActive) {
+          setTimeout(startListeningTurn, 150);
+        }
+      }
+    };
+  }
+
+  // Live Token Streaming Groq -> Live Sentence Deepgram TTS
+  async function sendToGroq(userMsg) {
+    if (!userMsg.trim()) return;
+    stopAllSpeechAudio();
+
+    setStatus("THINKING...", "thinking");
+    setSubtitle("YOU", userMsg);
+
+    chatHistory.push({ role: "user", content: userMsg });
+
+    var fullReply = "";
+    var currentSentence = "";
+    isAudioStreaming = true;
+
+    try {
+      var resp = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg, history: chatHistory })
+      });
+
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder("utf-8");
+      var buffer = "";
+
+      while (true) {
+        var result = await reader.read();
+        if (result.done) break;
+
+        buffer += decoder.decode(result.value, { stream: true });
+        var lines = buffer.split("\n\n");
+        buffer = lines.pop();
+
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (line.startsWith("data: ")) {
+            var dataStr = line.substring(6).trim();
+            if (dataStr === "[DONE]") continue;
+
+            try {
+              var parsed = JSON.parse(dataStr);
+              var token = parsed.token || "";
+              fullReply += token;
+              currentSentence += token;
+
+              setSubtitle("ROX", fullReply);
+
+              var isBoundary = /[।?!,;\n]/.test(token) || (currentSentence.length >= 25 && /\s/.test(token));
+              if (isBoundary && currentSentence.trim().length > 3) {
+                var chunk = currentSentence.trim();
+                currentSentence = "";
+                queueAndPlayAudio(chunk, false);
+              }
+            } catch(e) {}
+          }
+        }
+      }
+
+      if (currentSentence.trim().length > 0) {
+        queueAndPlayAudio(currentSentence.trim(), true);
+      } else {
+        isAudioStreaming = false;
+        if (activeSources.length === 0) {
+          isSpeaking = false;
+          setStatus("READY", "");
+          if (isCallActive) {
+            setTimeout(startListeningTurn, 150);
+          }
+        }
+      }
+
+      chatHistory.push({ role: "assistant", content: fullReply });
+
+    } catch(err) {
+      console.error("Stream Error:", err);
+      setSubtitle("ROX", "माफ़ करना, नेटवर्क में रुकावट आई।");
+      setStatus("ERROR", "");
+      setTimeout(function(){ setStatus("READY", ""); }, 2000);
+    }
+  }
+
+  /* ---------- PERSISTENT CALL STREAM ENGINE (NO REPEATED PERMISSION, INSTANT ZERO-LATENCY) ---------- */
+  var micProcessor = null;
+  var pcmBuffers = [];
+  var isCallActive = false;
+  var isListening = false;
+  var isSpeaking = false;
+  var voiceDetected = false;
+  var silenceStartTime = null;
+
+  function encodeWAV(samples, sampleRate) {
+    var buffer = new ArrayBuffer(44 + samples.length * 2);
+    var view = new DataView(buffer);
+    function writeString(offset, string) {
+      for (var i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    }
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM
+    view.setUint16(22, 1, true); // Mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+    var offset = 44;
+    for (var i = 0; i < samples.length; i++, offset += 2) {
+      var s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+  }
+
+  async function initCallAudioStream() {
+    ensureAudioCtx();
+    if (micStream && micStream.active) return true;
+
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          autoGainControl: true,
+          echoCancellation: true,
+          noiseSuppression: false,
+          channelCount: 1
+        }
+      });
+
+      micSource = audioCtx.createMediaStreamSource(micStream);
+      micSource.connect(analyser); // For WebGL Orb visualizer only!
+
+      var bufferSize = 2048;
+      micProcessor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+      
+      micProcessor.onaudioprocess = function(e){
+        // If Rox is speaking or call is not listening, IGNORE audio (prevents self-hearing/echo)
+        if (!isCallActive || isSpeaking || !isListening) return;
+
+        var input = e.inputBuffer.getChannelData(0);
+        pcmBuffers.push(new Float32Array(input));
+
+        // Real-time Energy / RMS calculation for VAD
+        var sum = 0;
+        for (var i = 0; i < input.length; i++) {
+          sum += input[i] * input[i];
+        }
+        var rms = Math.sqrt(sum / input.length);
+        var now = Date.now();
+
+        // Voice activity threshold
+        if (rms > 0.016) {
+          voiceDetected = true;
+          silenceStartTime = null;
+          setStatus("LISTENING... (SPEAKING)", "listening");
+        } else if (voiceDetected) {
+          if (!silenceStartTime) {
+            silenceStartTime = now;
+          } else if (now - silenceStartTime > 800) { // 800ms silence = user stopped speaking!
+            finishSpeechAndProcess();
+          }
+        } else {
+          // Keep buffer clean if silent for long time
+          if (pcmBuffers.length > 50) {
+            pcmBuffers.splice(0, 15);
+          }
+        }
+      };
+
+      micSource.connect(micProcessor);
+      micProcessor.connect(analyser);
+      return true;
+
+    } catch(err) {
+      console.error("Mic access error:", err);
+      alert("Microphone permission allow karein taaki call chal sake!");
+      return false;
+    }
+  }
+
+  function startListeningTurn() {
+    if (!isCallActive || isSpeaking) return;
+    pcmBuffers = [];
+    voiceDetected = false;
+    silenceStartTime = null;
+    isListening = true;
+    micBtn.classList.add('active');
+    setStatus("LISTENING... (SPEAK FREELY)", "listening");
+    glow = 0.7;
+  }
+
+  async function finishSpeechAndProcess() {
+    if (!isListening) return;
+    isListening = false;
+    setStatus("THINKING...", "thinking");
+
+    var totalLength = 0;
+    for (var i = 0; i < pcmBuffers.length; i++) {
+      totalLength += pcmBuffers[i].length;
+    }
+
+    if (!voiceDetected || totalLength < 3500) {
+      pcmBuffers = [];
+      if (isCallActive) {
+        setTimeout(startListeningTurn, 200);
+      }
+      return;
+    }
+
+    var flatSamples = new Float32Array(totalLength);
+    var offset = 0;
+    for (var j = 0; j < pcmBuffers.length; j++) {
+      flatSamples.set(pcmBuffers[j], offset);
+      offset += pcmBuffers[j].length;
+    }
+    pcmBuffers = [];
+
+    var wavBlob = encodeWAV(flatSamples, audioCtx.sampleRate);
+
+    try {
+      var resp = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'audio/wav' },
+        body: wavBlob
+      });
+      var data = await resp.json();
+      var transcript = (data.transcript || "").trim();
+
+      if (transcript) {
+        sendToGroq(transcript);
+      } else {
+        if (isCallActive) {
+          setTimeout(startListeningTurn, 200);
+        } else {
+          setStatus("READY", "");
+        }
+      }
+    } catch(err) {
+      console.error("Transcribe error:", err);
+      if (isCallActive) {
+        setTimeout(startListeningTurn, 300);
+      } else {
+        setStatus("READY", "");
+      }
+    }
+  }
+
+  async function toggleCall() {
+    if (isCallActive) {
+      // End call
+      isCallActive = false;
+      isListening = false;
+      stopAllSpeechAudio();
+      micBtn.classList.remove('active');
+      setStatus("CALL ENDED", "");
+      if (micStream) {
+        try { micStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}
+        micStream = null;
+        micSource = null;
+      }
+      setTimeout(function(){ setStatus("READY", ""); }, 1500);
+    } else {
+      // Start call (requests mic ONCE and stays open)
+      var ok = await initCallAudioStream();
+      if (ok) {
+        isCallActive = true;
+        startListeningTurn();
+      }
+    }
+  }
+
+  micBtn.addEventListener('click', toggleCall);
+
+  window.submitText = function(){
+    const txt = textInput.value;
+    if(!txt.trim()) return;
+    textInput.value = '';
+    sendToGroq(txt);
+  };
+
+})();
+</script>
+</body>
+</html>

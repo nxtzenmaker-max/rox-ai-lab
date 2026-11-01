@@ -4,14 +4,14 @@ import base64
 import asyncio
 from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
 # Load environment
 load_dotenv()
 
-from core.brain import get_ai_response
+from core.brain import get_ai_response, stream_ai_response
 from core.voice import generate_speech, transcribe_audio_deepgram
 
 app = FastAPI(title="ROX AI Lab - 3D Humanoid & Phone Agent")
@@ -28,6 +28,16 @@ class TTSRequest(BaseModel):
     text: str
 
 @app.get("/", response_class=HTMLResponse)
+async def serve_orb():
+    with open(os.path.join(STATIC_DIR, "orb.html"), "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.get("/orb", response_class=HTMLResponse)
+async def serve_orb_alias():
+    with open(os.path.join(STATIC_DIR, "orb.html"), "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.get("/lab", response_class=HTMLResponse)
 async def serve_index():
     with open(os.path.join(STATIC_DIR, "index.html"), "r", encoding="utf-8") as f:
         return f.read()
@@ -47,8 +57,19 @@ async def health_check():
 
 @app.post("/api/chat")
 async def chat_endpoint(req: ChatRequest):
+    print(f"[Chat Request] User message: '{req.message}'")
     reply = get_ai_response(req.message, req.history)
+    print(f"[Chat Response] Reply: '{reply}'")
     return {"reply": reply}
+
+@app.post("/api/chat/stream")
+async def chat_stream_endpoint(req: ChatRequest):
+    def event_generator():
+        for token in stream_ai_response(req.message, req.history):
+            payload = json.dumps({"token": token}, ensure_ascii=False)
+            yield f"data: {payload}\n\n"
+        yield "data: [DONE]\n\n"
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/api/tts")
 async def tts_endpoint(req: TTSRequest):
@@ -58,9 +79,40 @@ async def tts_endpoint(req: TTSRequest):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.post("/api/transcribe")
+async def transcribe_endpoint(request: Request):
+    content_type = request.headers.get("content-type", "audio/webm").split(";")[0]
+    audio_bytes = await request.body()
+    print(f"[Transcribe Request] Content-Type: {content_type}, Size: {len(audio_bytes)} bytes")
+    if not audio_bytes:
+        return JSONResponse(status_code=400, content={"error": "Empty audio data"})
+    try:
+        text = await transcribe_audio_deepgram(audio_bytes, mime_type=content_type)
+        print(f"[Transcribe Result] Text: '{text}'")
+        return {"transcript": text}
+    except Exception as e:
+        print(f"[Transcribe Error] {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 # ==========================================
-# TWILIO PHONE AGENT INTEGRATION (Turn-by-Turn & Stream)
+# EXOTEL INDIAN CLOUD TELEPHONY (080-47289547)
 # ==========================================
+
+@app.api_route("/exotel/incoming", methods=["GET", "POST"])
+async def exotel_incoming_call(request: Request):
+    """
+    Exotel calls this webhook when someone dials or when an outbound call connects.
+    Returns ExoML with female Deepgram voice greeting.wav.
+    """
+    host = request.headers.get("host", "speak-documentary-cake-door.trycloudflare.com")
+    exoml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Play>https://{host}/static/greeting.wav</Play>
+    <Gather timeout="10" finishOnKey="#">
+        <Say voice="Polly.Aditi">Boliye, kya madad karoon?</Say>
+    </Gather>
+</Response>"""
+    return Response(content=exoml, media_type="application/xml")
 
 import urllib.parse
 
