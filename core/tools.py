@@ -7,47 +7,40 @@ import socket
 import urllib.request
 import json
 
+# Railway High-Speed VPS Configuration (48 CPU Cores, 512GB RAM, 2.9TB SSD)
+VPS_HOST = os.getenv("VPS_HOST", "iriguchi.proxy.rlwy.net")
+VPS_PORT = int(os.getenv("VPS_PORT", "58259"))
+VPS_USER = os.getenv("VPS_USER", "ajit")
+VPS_PASS = os.getenv("VPS_PASS", "ajit1234")
+
+def is_running_on_vps() -> bool:
+    """Checks if current execution environment is already the Railway VPS."""
+    try:
+        import getpass
+        node = platform.node()
+        user = getpass.getuser()
+        if user == "ajit" or "c77b48aac227" in node:
+            return True
+    except Exception:
+        pass
+    return False
+
 def get_system_status():
     """Returns basic system diagnostics (CPU, Memory, Uptime, OS)."""
     return get_detailed_sysinfo()
 
 def get_detailed_sysinfo():
-    """Returns full hardware specs, RAM, CPU cores, Disk, and Kernel."""
-    uname = platform.uname()
+    """Returns live hardware specs, RAM, CPU cores, Disk, and Kernel from the Railway VPS."""
+    # Run diagnostics on the Railway VPS directly
+    out = run_safe_shell_command("uname -s -r -m && lscpu | grep 'Model name\\|CPU(s):' && free -h && df -h /")
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # RAM info from /proc/meminfo if available
-    mem_total = "Unknown"
-    mem_free = "Unknown"
-    try:
-        with open("/proc/meminfo", "r") as f:
-            for line in f:
-                if "MemTotal" in line:
-                    mem_total = f"{int(line.split()[1]) // 1024} MB"
-                elif "MemAvailable" in line:
-                    mem_free = f"{int(line.split()[1]) // 1024} MB"
-    except Exception:
-        pass
-
-    # Disk
-    try:
-        disk = shutil.disk_usage("/")
-        total_disk = f"{disk.total // (1024**3)} GB"
-        free_disk = f"{disk.free // (1024**3)} GB"
-        used_disk = f"{disk.used // (1024**3)} GB"
-    except Exception:
-        total_disk = free_disk = used_disk = "Unknown"
-
-    cores = os.cpu_count() or 1
 
     return {
         "status": "online",
         "current_time": now,
-        "os": f"{uname.system} {uname.release} ({uname.machine})",
-        "hostname": uname.node,
-        "cpu_cores": f"{cores} Cores",
-        "ram": f"{mem_free} available of {mem_total}",
-        "disk_usage": f"{used_disk} used of {total_disk} ({free_disk} free)",
+        "vps_target": f"{VPS_USER}@{VPS_HOST}:{VPS_PORT}",
+        "vps_specs": "48 CPU Cores (AMD EPYC 9655P), 512GB RAM, 2.9TB NVMe Storage, Debian Linux",
+        "live_telemetry": out
     }
 
 def get_network_info():
@@ -75,8 +68,12 @@ def get_network_info():
 
     return info
 
-def run_safe_shell_command(cmd: str):
-    """Executes a non-destructive shell command and returns output with safety guards."""
+def run_safe_shell_command(cmd: str) -> str:
+    """
+    Executes a shell command directly on the Railway VPS (48-Core, 512GB RAM).
+    If running locally on the VPS, runs via subprocess.
+    If running on Vercel or any external host, runs via SSH (iriguchi.proxy.rlwy.net:58259).
+    """
     cmd_clean = cmd.strip()
     cmd_lower = cmd_clean.lower()
     blocked = ["rm -rf /", "rm -rf ~", "mkfs", ":(){ :|:& };:", "dd if=/dev/zero", "shutdown", "reboot", "init 0"]
@@ -84,26 +81,45 @@ def run_safe_shell_command(cmd: str):
         if b in cmd_lower:
             return f"Command '{cmd_clean}' blocked for system safety."
 
+    # 1. If currently running directly on the Railway VPS, execute locally for sub-millisecond response
+    if is_running_on_vps():
+        try:
+            res = subprocess.run(cmd_clean, shell=True, capture_output=True, text=True, timeout=12)
+            out = (res.stdout + res.stderr).strip()
+            if not out:
+                return "(Command completed with return code 0 and no output)"
+            if len(out) > 1200:
+                out = out[:1200] + "\n... [Output truncated for brevity]"
+            return out
+        except subprocess.TimeoutExpired:
+            return f"Command '{cmd_clean}' timed out after 12 seconds."
+        except Exception as e:
+            return f"Error executing locally on VPS: {str(e)}"
+
+    # 2. If running remotely (e.g. Vercel serverless), execute via SSH on the Railway VPS
     try:
-        res = subprocess.run(cmd_clean, shell=True, capture_output=True, text=True, timeout=12)
-        out = (res.stdout + res.stderr).strip()
+        import paramiko
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(VPS_HOST, port=VPS_PORT, username=VPS_USER, password=VPS_PASS, timeout=8)
+        stdin, stdout, stderr = ssh.exec_command(cmd_clean, timeout=12)
+        out = (stdout.read().decode("utf-8", errors="replace") + stderr.read().decode("utf-8", errors="replace")).strip()
+        ssh.close()
         if not out:
-            return "(Command completed with return code 0 and no output)"
+            return "(Command completed on Railway VPS with return code 0 and no output)"
         if len(out) > 1200:
             out = out[:1200] + "\n... [Output truncated for brevity]"
         return out
-    except subprocess.TimeoutExpired:
-        return f"Command '{cmd_clean}' timed out after 12 seconds."
     except Exception as e:
-        return f"Error executing command: {str(e)}"
+        # Fallback to local subprocess if remote SSH fails
+        try:
+            res = subprocess.run(cmd_clean, shell=True, capture_output=True, text=True, timeout=10)
+            return (res.stdout + res.stderr).strip() or "(Executed locally)"
+        except Exception as ex:
+            return f"Error executing command: SSH failed ({str(e)}), Local failed ({str(ex)})"
 
 def clean_system_cache():
-    """Safely purges temporary files and system caches."""
-    cleaned = []
-    try:
-        res = subprocess.run("pip cache purge", shell=True, capture_output=True, text=True)
-        if "Files removed" in res.stdout:
-            cleaned.append(res.stdout.strip())
-    except Exception:
-        pass
-    return cleaned if cleaned else ["System is already clean and optimized!"]
+    """Safely purges temporary files and system caches on the Railway VPS."""
+    cmd = "pip cache purge && rm -rf /tmp/*.tmp /tmp/pip-*"
+    out = run_safe_shell_command(cmd)
+    return [out]

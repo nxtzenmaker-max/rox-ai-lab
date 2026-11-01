@@ -107,33 +107,37 @@ def parse_shell_command(text: str) -> str | None:
     if any(k in lower for k in ['storage check', 'disk status', 'disk check']):
         return 'df -h /'
 
-    # 2. Explicit command prefixes
+    # 2. Strip conversational wrappers (leading/trailing fillers)
+    cleaned = text.strip()
+    trailing_phrases = [
+        r'\s+(check\s*karo|chalao|run\s*karo|karo|kar\s*do|batao|dikhao|do|plz|please|hai|bhi)$',
+        r'\s+(vps\s*pe|vps\s*me|server\s*pe|server\s*me)$',
+        r'\s+(pe|me)$'
+    ]
+    leading_phrases = [
+        r'^(vps\s*pe|vps\s*me|server\s*pe|server\s*me|terminal\s*me|bash\s*me)\s+'
+    ]
+    for _ in range(3):
+        for lp in leading_phrases:
+            cleaned = re.sub(lp, '', cleaned, flags=re.IGNORECASE).strip()
+        for tp in trailing_phrases:
+            cleaned = re.sub(tp, '', cleaned, flags=re.IGNORECASE).strip()
+
+    # 3. Prefixes (checked at start of string only)
     prefixes = [
         'command chalao:', 'command chalao', 'run command:', 'run command',
-        'terminal me', 'terminal:', 'shell:', 'bash:', 'command:', 'कमांड चलाओ:', 'कमांड चलाओ',
-        'chalao:', 'chalao', 'run:', 'exec:', 'execute:', 'vps me', 'vps pe'
+        'terminal:', 'shell:', 'bash:', 'command:', 'कमांड चलाओ:', 'कमांड चलाओ',
+        'chalao:', 'chalao', 'run:', 'exec:', 'execute:'
     ]
     for p in prefixes:
-        if p in lower:
-            idx = lower.index(p) + len(p)
-            extracted = text[idx:].strip().lstrip(':').strip()
-            # Clean trailing Hindi command verbs
-            extracted = re.sub(r'\s+(run\s*karo|chalao|karo|kar\s*do|do|plz|please|dekho)$', '', extracted, flags=re.IGNORECASE).strip()
-            if extracted:
-                return extracted
+        if cleaned.lower().startswith(p):
+            cleaned = cleaned[len(p):].strip().lstrip(':').strip()
+            break
 
-    # 3. Trailing command verbs: e.g. 'uptime chalao', 'free -m run karo'
-    m = re.match(r'^(.*?)\s+(chalao|run\s*karo|execute\s*karo)$', text.strip(), re.IGNORECASE)
-    if m:
-        candidate = m.group(1).strip()
-        first = candidate.lower().split()[0] if candidate.split() else ''
-        if first in KNOWN_SHELL_BINARIES or '/' in candidate:
-            return candidate
-
-    # 4. Direct binary execution (e.g., 'ls -la', 'uptime', 'free -m', 'ps aux')
-    first_word = lower.split()[0] if lower.split() else ''
-    if first_word in KNOWN_SHELL_BINARIES:
-        return text.strip()
+    # 4. If first token is a known shell binary
+    first_word = cleaned.lower().split()[0] if cleaned.split() else ''
+    if first_word in KNOWN_SHELL_BINARIES or '/' in first_word:
+        return cleaned
 
     return None
 
