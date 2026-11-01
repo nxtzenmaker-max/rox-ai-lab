@@ -524,16 +524,37 @@
     } catch(e) {}
   }
 
-  // Camera Photo Capture Action
+  // Camera Photo Capture Action (Front vs Back camera)
   var cameraStream = null;
-  async function capturePhotoAction() {
-    setStatus("CAPTURING PHOTO...", "thinking");
+  var currentFacing = null;
+
+  async function capturePhotoAction(facing) {
+    facing = facing || 'front';
+    var isBack = (facing === 'back' || facing === 'environment');
+    var requestedFacing = isBack ? { ideal: "environment" } : { ideal: "user" };
+
+    setStatus("OPENING " + (isBack ? "BACK" : "FRONT") + " CAMERA...", "thinking");
+
     try {
+      // Stop previous camera stream if switching facingMode
+      if (cameraStream && currentFacing !== (isBack ? 'back' : 'front')) {
+        try {
+          cameraStream.getTracks().forEach(function(t) { t.stop(); });
+        } catch(e) {}
+        cameraStream = null;
+      }
+
       if (!cameraStream || !cameraStream.active) {
         cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }
+          video: {
+            facingMode: requestedFacing,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
         });
+        currentFacing = isBack ? 'back' : 'front';
       }
+
       var video = document.getElementById('cameraFeed');
       video.srcObject = cameraStream;
       await video.play();
@@ -543,11 +564,17 @@
         canvas.width = video.videoWidth || 640;
         canvas.height = video.videoHeight || 480;
         var ctx = canvas.getContext('2d');
-        // Mirror horizontally for natural selfie view
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+        if (!isBack) {
+          // Mirror horizontally for selfie look
+          ctx.translate(canvas.width, 0);
+          ctx.scale(-1, 1);
+        } else {
+          // Normal orientation for back camera
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+        }
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         var dataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
         // Flash effect and shutter click
@@ -556,17 +583,56 @@
         var preview = document.getElementById('photoPreview');
         var modal = document.getElementById('photoModal');
         var dlBtn = document.getElementById('photoDownloadBtn');
+        var titleEl = document.querySelector('.photo-title');
+        if (titleEl) {
+          titleEl.innerText = "📷 " + (isBack ? "BACK CAMERA" : "FRONT CAMERA") + " PHOTO, BOSS!";
+        }
         if (preview && modal) {
           preview.src = dataUrl;
           if (dlBtn) dlBtn.href = dataUrl;
           modal.style.display = 'flex';
         }
         setStatus("PHOTO CAPTURED, BOSS!", "speaking");
-      }, 500);
+
+        // Log to database
+        try {
+          fetch('/api/photos/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ facing: isBack ? 'back' : 'front' })
+          });
+        } catch(e) {}
+      }, 550);
 
     } catch(err) {
       console.warn("Camera access error:", err);
-      setStatus("CAMERA PERMISSION NEEDED", "error");
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        currentFacing = 'default';
+        var vid = document.getElementById('cameraFeed');
+        vid.srcObject = cameraStream;
+        await vid.play();
+        setTimeout(function() {
+          var can = document.getElementById('photoCanvas');
+          can.width = vid.videoWidth || 640;
+          can.height = vid.videoHeight || 480;
+          var c = can.getContext('2d');
+          c.drawImage(vid, 0, 0, can.width, can.height);
+          var dUrl = can.toDataURL('image/jpeg', 0.9);
+          triggerCameraFlash();
+          var prev = document.getElementById('photoPreview');
+          var mod = document.getElementById('photoModal');
+          var dl = document.getElementById('photoDownloadBtn');
+          if (prev && mod) {
+            prev.src = dUrl;
+            if (dl) dl.href = dUrl;
+            mod.style.display = 'flex';
+          }
+          setStatus("PHOTO CAPTURED, BOSS!", "speaking");
+        }, 500);
+      } catch(e2) {
+        setStatus("CAMERA PERMISSION NEEDED", "error");
+      }
     }
   }
 
@@ -827,10 +893,12 @@
               var cleanSubtitle = fullReply.replace(/\[ACTION:[^\]]+\]/gi, '').trim();
               setSubtitle("ROX", cleanSubtitle);
 
-              // Trigger photo capture command if requested by Boss
-              if (!actionTriggered && fullReply.includes("[ACTION: CAPTURE_PHOTO]")) {
+              // Trigger photo capture command (front vs back) if requested by Boss
+              if (!actionTriggered && fullReply.includes("[ACTION: CAPTURE_PHOTO")) {
                 actionTriggered = true;
-                capturePhotoAction();
+                var facingMatch = fullReply.match(/\[ACTION:\s*CAPTURE_PHOTO(?::(front|back))?\]/i);
+                var facing = (facingMatch && facingMatch[1]) ? facingMatch[1].toLowerCase() : 'front';
+                capturePhotoAction(facing);
               }
 
               // High-quality sentence boundary detection:

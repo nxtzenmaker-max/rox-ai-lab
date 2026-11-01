@@ -13,6 +13,7 @@ load_dotenv()
 
 from core.brain import get_ai_response, stream_ai_response
 from core.voice import generate_speech, transcribe_audio_deepgram
+from core.db import save_message, log_photo, is_turso_configured
 
 app = FastAPI(title="ROX AI Lab - 3D Humanoid & Phone Agent")
 
@@ -26,6 +27,9 @@ class ChatRequest(BaseModel):
 
 class TTSRequest(BaseModel):
     text: str
+
+class PhotoLogRequest(BaseModel):
+    facing: str = "front"
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_orb():
@@ -58,18 +62,29 @@ async def health_check():
 @app.post("/api/chat")
 async def chat_endpoint(req: ChatRequest):
     print(f"[Chat Request] User message: '{req.message}'")
+    save_message("user", req.message)
     reply = get_ai_response(req.message, req.history)
     print(f"[Chat Response] Reply: '{reply}'")
+    save_message("assistant", reply)
     return {"reply": reply}
 
 @app.post("/api/chat/stream")
 async def chat_stream_endpoint(req: ChatRequest):
+    save_message("user", req.message)
     def event_generator():
+        full_tokens = []
         for token in stream_ai_response(req.message, req.history):
+            full_tokens.append(token)
             payload = json.dumps({"token": token}, ensure_ascii=False)
             yield f"data: {payload}\n\n"
+        save_message("assistant", "".join(full_tokens))
         yield "data: [DONE]\n\n"
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@app.post("/api/photos/log")
+async def log_photo_endpoint(req: PhotoLogRequest):
+    log_photo(req.facing)
+    return {"status": "success", "facing": req.facing}
 
 @app.post("/api/tts")
 async def tts_endpoint(req: TTSRequest):
