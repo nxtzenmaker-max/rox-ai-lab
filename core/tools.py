@@ -76,18 +76,24 @@ def get_network_info():
     return info
 
 def run_safe_shell_command(cmd: str):
-    """Executes a non-destructive shell command and returns output."""
+    """Executes a non-destructive shell command and returns output with safety guards."""
     cmd_clean = cmd.strip()
     cmd_lower = cmd_clean.lower()
-    blocked = ["rm -rf", "mkfs", ":(){ :|:& };:", "dd if=", "shutdown", "reboot"]
+    blocked = ["rm -rf /", "rm -rf ~", "mkfs", ":(){ :|:& };:", "dd if=/dev/zero", "shutdown", "reboot", "init 0"]
     for b in blocked:
         if b in cmd_lower:
             return f"Command '{cmd_clean}' blocked for system safety."
 
     try:
-        res = subprocess.run(cmd_clean, shell=True, capture_output=True, text=True, timeout=8)
+        res = subprocess.run(cmd_clean, shell=True, capture_output=True, text=True, timeout=12)
         out = (res.stdout + res.stderr).strip()
-        return out if out else "(Command completed with no output)"
+        if not out:
+            return "(Command completed with return code 0 and no output)"
+        if len(out) > 1200:
+            out = out[:1200] + "\n... [Output truncated for brevity]"
+        return out
+    except subprocess.TimeoutExpired:
+        return f"Command '{cmd_clean}' timed out after 12 seconds."
     except Exception as e:
         return f"Error executing command: {str(e)}"
 
