@@ -99,6 +99,15 @@ def _prepare_user_input(user_input: str) -> str:
         except Exception as e:
             print(f"[Memory Inject Error] {e}")
 
+    # Explicit camera facing instruction
+    photo_keywords = ["photo", "फोटो", "तस्वीर", "picture", "capture", "खींच", "camera", "कैमरा"]
+    if any(k in lower for k in photo_keywords):
+        back_indicators = ["back", "rear", "peeche", "piche", "peche", "पीछे", "बैक", "रियर"]
+        if any(b in lower for b in back_indicators):
+            user_input += "\n(निर्देश: बॉस ने बैक (पीछे वाले) कैमरे से फोटो खींचने को कहा है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:back] टैग जोड़ो)"
+        elif any(f in lower for f in ["front", "selfie", "aage", "सामने", "फ्रंट", "आगे", "सेल्फी"]):
+            user_input += "\n(निर्देश: बॉस ने फ्रंट (आगे वाले) कैमरे से फोटो खींचने को कहा है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:front] जोड़ो)"
+
     return user_input
 
 def get_ai_response(user_input: str, history: list = None) -> str:

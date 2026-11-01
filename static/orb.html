@@ -589,29 +589,82 @@
   async function capturePhotoAction(facing) {
     facing = facing || 'front';
     var isBack = (facing === 'back' || facing === 'environment');
-    var requestedFacing = isBack ? { ideal: "environment" } : { ideal: "user" };
 
     setStatus("OPENING " + (isBack ? "BACK" : "FRONT") + " CAMERA...", "thinking");
 
+    // 1. ALWAYS terminate previous camera stream to release the phone hardware lock
+    if (cameraStream) {
+      try {
+        cameraStream.getTracks().forEach(function(t) { t.stop(); });
+      } catch(e) {}
+      cameraStream = null;
+    }
+
     try {
-      // Stop previous camera stream if switching facingMode
-      if (cameraStream && currentFacing !== (isBack ? 'back' : 'front')) {
+      if (isBack) {
+        // Strategy A: Find explicit rear/back camera deviceId via enumerateDevices
+        var backDeviceId = null;
         try {
-          cameraStream.getTracks().forEach(function(t) { t.stop(); });
+          var devices = await navigator.mediaDevices.enumerateDevices();
+          var videoDevices = devices.filter(function(d) { return d.kind === 'videoinput'; });
+          for (var i = 0; i < videoDevices.length; i++) {
+            var lbl = (videoDevices[i].label || '').toLowerCase();
+            if (lbl.includes('back') || lbl.includes('rear') || lbl.includes('environment')) {
+              backDeviceId = videoDevices[i].deviceId;
+              break;
+            }
+          }
         } catch(e) {}
-        cameraStream = null;
+
+        if (backDeviceId) {
+          try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                deviceId: { exact: backDeviceId },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+              }
+            });
+          } catch(e) {}
+        }
+
+        // Strategy B: facingMode: { ideal: "environment" }
+        if (!cameraStream) {
+          try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+              }
+            });
+          } catch(e) {}
+        }
+
+        // Strategy C: simple facingMode: "environment"
+        if (!cameraStream) {
+          cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+          });
+        }
+      } else {
+        // Front / Selfie camera
+        try {
+          cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: "user" },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          });
+        } catch(e) {
+          cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user" }
+          });
+        }
       }
 
-      if (!cameraStream || !cameraStream.active) {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: requestedFacing,
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          }
-        });
-        currentFacing = isBack ? 'back' : 'front';
-      }
+      currentFacing = isBack ? 'back' : 'front';
 
       var video = document.getElementById('cameraFeed');
       video.srcObject = cameraStream;
@@ -619,21 +672,21 @@
 
       setTimeout(function() {
         var canvas = document.getElementById('photoCanvas');
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        canvas.width = video.videoWidth || (isBack ? 1280 : 720);
+        canvas.height = video.videoHeight || (isBack ? 720 : 1280);
         var ctx = canvas.getContext('2d');
 
         if (!isBack) {
-          // Mirror horizontally for selfie look
+          // Mirror horizontally for natural selfie view
           ctx.translate(canvas.width, 0);
           ctx.scale(-1, 1);
         } else {
-          // Normal orientation for back camera
+          // Unmirrored / authentic view for rear camera
           ctx.setTransform(1, 0, 0, 1, 0, 0);
         }
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        var dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
 
         // Flash effect and shutter click
         triggerCameraFlash();
@@ -652,6 +705,14 @@
         }
         setStatus("PHOTO CAPTURED, BOSS!", "speaking");
 
+        // Immediately release camera stream so phone's green privacy indicator turns off
+        if (cameraStream) {
+          try {
+            cameraStream.getTracks().forEach(function(t) { t.stop(); });
+          } catch(e) {}
+          cameraStream = null;
+        }
+
         // Log to database
         try {
           fetch('/api/photos/log', {
@@ -660,7 +721,7 @@
             body: JSON.stringify({ facing: isBack ? 'back' : 'front' })
           });
         } catch(e) {}
-      }, 550);
+      }, 650);
 
     } catch(err) {
       console.warn("Camera access error:", err);
@@ -676,20 +737,18 @@
           can.height = vid.videoHeight || 480;
           var c = can.getContext('2d');
           c.drawImage(vid, 0, 0, can.width, can.height);
-          var dUrl = can.toDataURL('image/jpeg', 0.9);
+          var du = can.toDataURL('image/jpeg', 0.85);
           triggerCameraFlash();
-          var prev = document.getElementById('photoPreview');
-          var mod = document.getElementById('photoModal');
-          var dl = document.getElementById('photoDownloadBtn');
-          if (prev && mod) {
-            prev.src = dUrl;
-            if (dl) dl.href = dUrl;
-            mod.style.display = 'flex';
+          var p = document.getElementById('photoPreview');
+          var m = document.getElementById('photoModal');
+          if (p && m) { p.src = du; m.style.display = 'flex'; }
+          if (cameraStream) {
+            try { cameraStream.getTracks().forEach(function(t) { t.stop(); }); } catch(e) {}
+            cameraStream = null;
           }
-          setStatus("PHOTO CAPTURED, BOSS!", "speaking");
-        }, 500);
+        }, 600);
       } catch(e2) {
-        setStatus("CAMERA PERMISSION NEEDED", "error");
+        setStatus("CAMERA ERROR", "error");
       }
     }
   }
@@ -919,6 +978,10 @@
     var turnId = currentTurnId;
     var actionTriggered = false;
 
+    // Detect Boss's explicit camera intent from what was spoken or typed
+    var isBackIntent = /(back|rear|peeche|piche|peche|पीछे|बैक|रियर)/i.test(userMsg);
+    var isFrontIntent = /(front|selfie|aage|अगला|सामने|फ्रंट|आगे|सेल्फी)/i.test(userMsg);
+
     try {
       var resp = await fetch('/api/chat/stream', {
         method: 'POST',
@@ -964,10 +1027,18 @@
               setSubtitle("ROX", cleanSubtitle, emo);
 
               // Trigger photo capture command (front vs back) if requested by Boss
-              if (!actionTriggered && fullReply.includes("[ACTION: CAPTURE_PHOTO")) {
+              var facingMatch = fullReply.match(/\[ACTION:\s*CAPTURE_PHOTO(?::(front|back))?\s*\]/i);
+              if (!actionTriggered && facingMatch) {
                 actionTriggered = true;
-                var facingMatch = fullReply.match(/\[ACTION:\s*CAPTURE_PHOTO(?::(front|back))?\]/i);
-                var facing = (facingMatch && facingMatch[1]) ? facingMatch[1].toLowerCase() : 'front';
+                var facing = 'front';
+                if (facingMatch[1]) {
+                  facing = facingMatch[1].toLowerCase();
+                } else if (isBackIntent) {
+                  facing = 'back';
+                }
+                if (isBackIntent && !isFrontIntent) {
+                  facing = 'back';
+                }
                 capturePhotoAction(facing);
               }
 
@@ -992,6 +1063,13 @@
         if (streamCompleted) {
           break;
         }
+      }
+
+      // Safety fallback check if photo command was requested
+      if (!actionTriggered && /CAPTURE_PHOTO/i.test(fullReply)) {
+        actionTriggered = true;
+        var facing = (isBackIntent && !isFrontIntent) ? 'back' : (/back/i.test(fullReply) ? 'back' : 'front');
+        capturePhotoAction(facing);
       }
 
       // Flush any remaining sentence to TTS
