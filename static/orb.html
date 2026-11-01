@@ -39,10 +39,10 @@
   #glow {
     position: fixed;
     left: 50%;
-    top: 40%;
-    width: 85vmin;
-    height: 85vmin;
-    margin: -42.5vmin 0 0 -42.5vmin;
+    top: 33%;
+    width: 80vmin;
+    height: 80vmin;
+    margin: -40vmin 0 0 -40vmin;
     border-radius: 50%;
     pointer-events: none;
     opacity: 0.35;
@@ -151,35 +151,35 @@
     white-space: nowrap;
   }
 
-  /* Subtitle Card (Uncongested, Luxurious Response Card) */
+  /* Compact Compressed Subtitle Strip down near the bottom */
   .subtitles-box {
-    max-width: 600px;
-    width: 100%;
-    margin: 0 auto 18px auto;
-    padding: 18px 24px;
-    background: rgba(13, 17, 32, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 26px;
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65), 0 0 24px rgba(0, 242, 254, 0.08);
+    max-width: 480px;
+    width: calc(100% - 24px);
+    margin: 0 auto 10px auto;
+    padding: 8px 14px;
+    background: rgba(10, 14, 26, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 18px;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 242, 254, 0.05);
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    max-height: 180px;
+    gap: 4px;
+    max-height: 72px;
     overflow-y: auto;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     pointer-events: auto;
   }
   .subtitles-box::-webkit-scrollbar {
-    width: 4px;
+    width: 3px;
   }
   .subtitles-box::-webkit-scrollbar-track {
     background: transparent;
   }
   .subtitles-box::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.22);
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
   }
   .sub-header {
     display: flex;
@@ -188,18 +188,18 @@
     width: 100%;
   }
   .speaker-pill {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 800;
-    letter-spacing: 1.2px;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    padding: 3px 10px;
-    border-radius: 12px;
+    padding: 2px 7px;
+    border-radius: 8px;
   }
   .speaker-pill.speaker-rox {
     background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(168, 85, 247, 0.25));
     color: #38bdf8;
     border: 1px solid rgba(0, 242, 254, 0.45);
-    box-shadow: 0 0 12px rgba(0, 242, 254, 0.25);
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
   }
   .speaker-pill.speaker-boss {
     background: rgba(255, 255, 255, 0.1);
@@ -207,20 +207,20 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
   .sub-emo {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #cbd5e1;
     background: rgba(255, 255, 255, 0.08);
-    padding: 3px 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2px 7px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
   .sub-body {
-    font-size: 16px;
+    font-size: 13.5px;
     font-weight: 500;
-    line-height: 1.7;
-    color: #f8fafc;
-    letter-spacing: 0.3px;
+    line-height: 1.45;
+    color: #f1f5f9;
+    letter-spacing: 0.2px;
     word-break: break-word;
   }
 
@@ -230,18 +230,18 @@
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 600px;
+    max-width: 500px;
     margin: 0 auto;
     pointer-events: auto;
   }
   
   .mic-button-wrap {
     position: relative;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
   .mic-button {
-    width: 72px;
-    height: 72px;
+    width: 66px;
+    height: 66px;
     border-radius: 50%;
     border: none;
     background: linear-gradient(135deg, #00f2fe 0%, #9333ea 100%);
@@ -250,12 +250,12 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 8px 30px rgba(0, 242, 254, 0.35), 0 0 20px rgba(147, 51, 234, 0.35);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 6px 24px rgba(0, 242, 254, 0.35), 0 0 18px rgba(147, 51, 234, 0.3);
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
   .mic-button:hover {
-    transform: scale(1.06);
-    box-shadow: 0 12px 35px rgba(0, 242, 254, 0.5), 0 0 30px rgba(236, 72, 153, 0.5);
+    transform: scale(1.05);
+    box-shadow: 0 8px 30px rgba(0, 242, 254, 0.5), 0 0 25px rgba(236, 72, 153, 0.5);
   }
   .mic-button:active {
     transform: scale(0.96);
@@ -271,14 +271,14 @@
     display: flex;
     align-items: center;
     width: 100%;
-    height: 52px;
+    height: 48px;
     background: rgba(15, 23, 42, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.11);
     border-radius: 9999px;
-    padding: 0 6px 0 22px;
+    padding: 0 5px 0 18px;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   .input-bar:focus-within {
@@ -291,7 +291,7 @@
     border: none;
     outline: none;
     color: #fff;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
   }
   .input-bar input::placeholder {
@@ -302,21 +302,17 @@
     background: linear-gradient(135deg, #00f2fe, #9333ea);
     border: none;
     color: #fff;
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s;
   }
   .send-btn:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 15px rgba(0, 242, 254, 0.5);
-  }
-  .send-btn:active {
-    transform: scale(0.95);
   }
 
   /* Camera Shutter Flash */
@@ -768,14 +764,14 @@
     canvas.width = w; canvas.height = h;
 
     var isPortrait = h > w;
-    // In mobile portrait, keep orb slightly more compact and float it gracefully in upper-middle
-    var s = isPortrait ? Math.floor(w * 0.76) : Math.floor(Math.min(w, h) * 0.88);
+    // Keep orb refined and compact in mobile portrait (68% of screen width)
+    var s = isPortrait ? Math.floor(w * 0.68) : Math.floor(Math.min(w, h) * 0.82);
     var x = Math.floor((w - s) / 2);
-    // In WebGL viewport, y=0 is bottom; 0.58-0.60 places orb in the comfortable upper-middle
-    var y = isPortrait ? Math.floor((h - s) * 0.58) : Math.floor((h - s) / 2);
+    // In WebGL, y=0 is bottom; 0.66 lifts the orb center to ~33% from the top
+    var y = isPortrait ? Math.floor(h * 0.66 - s / 2) : Math.floor((h - s) / 2);
 
     gl.viewport(x, y, s, s);
-    gl.uniform1f(uSize, Math.max(2.0, (s / dpr) / 120));
+    gl.uniform1f(uSize, Math.max(1.8, (s / dpr) / 120));
   }
   window.addEventListener('resize', resize);
   resize();
