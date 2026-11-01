@@ -468,30 +468,21 @@ def get_ai_response(user_input: str, history: list = None, conversation_id: str 
     return fallback_reply
 
 def stream_ai_response(user_input: str, history: list = None, conversation_id: str = None):
-    """Streams response tokens from Google Antigravity (agy), falling back to Groq in real time."""
-    try:
-        agy_gen = stream_antigravity(user_input, history, conversation_id)
-        if agy_gen is not None:
-            first_chunk = next(agy_gen, None)
-            if first_chunk is not None:
-                yield first_chunk
-                for chunk in agy_gen:
-                    yield chunk
-                return
-    except Exception as e:
-        print(f"[Antigravity stream_ai_response fallback] {e}")
-
+    """
+    Dual-Brain Architecture:
+    1. Groq is the Front-Facing Voice AI (instant sub-second TTFT streaming to Rudra).
+    2. Background Execution Agent runs tasks, shell commands, diagnostics, and tools silently on VPS.
+    3. Groq takes the AI Agent's raw output and speaks a concise, loving 1-2 sentence summary to Rudra.
+    4. Antigravity CLI acts as a secondary fallback if Groq API is unavailable.
+    """
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip() or HARDCODED_GROQ_KEY
     preferred_model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
 
-    user_input, term_tag = _prepare_user_input(user_input)
+    # 1. Background Execution Agent executes any requested tasks, shell commands, diagnostics, or tools
+    prepared_input, _ = _prepare_user_input(user_input)
 
-    # Immediately emit live terminal view if command executed so frontend HUD appears instantly
-    if term_tag:
-        yield f"{term_tag}\n"
-
-    # Keep streaming history compact (last 3 turns) to protect daily token allowance
+    # 2. Keep streaming history compact (last 3 turns)
     history_messages = []
     if history:
         for msg in history[-3:]:
@@ -501,9 +492,9 @@ def stream_ai_response(user_input: str, history: list = None, conversation_id: s
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for msg in history_messages[-3:]:
         messages.append(msg)
-    messages.append({"role": "user", "content": user_input})
+    messages.append({"role": "user", "content": prepared_input})
 
-    # Resilient multi-model fallback list
+    # Resilient multi-model fallback list on Groq LPUs
     models_to_try = [preferred_model] + [m for m in AVAILABLE_GROQ_MODELS if m != preferred_model]
 
     for m in models_to_try:
@@ -518,7 +509,7 @@ def stream_ai_response(user_input: str, history: list = None, conversation_id: s
                 extra_body=extra if extra else None
             )
 
-            # Probe the first chunk to ensure stream connection is established without 429
+            # Probe the first chunk to ensure stream connection is established without error
             chunk_iter = iter(completion)
             first_chunk = next(chunk_iter, None)
             if first_chunk:
@@ -529,9 +520,19 @@ def stream_ai_response(user_input: str, history: list = None, conversation_id: s
                 token = chunk.choices[0].delta.content or ""
                 if token:
                     yield token
-            return  # Successfully completed stream turn!
+            return  # Successfully completed ultra-fast voice stream turn!
         except Exception as e:
-            print(f"[Stream Brain Error on {m}] {e}")
+            print(f"[Groq Voice Stream Error on {m}] {e}")
             continue
 
-    yield "हाँ रुद्र, सिस्टम अभी थोड़ा व्यस्त है। मैं एक पल में दोबारा कोशिश कर रही हूँ!"
+    # Fallback to Antigravity CLI if all Groq models fail
+    try:
+        agy_gen = stream_antigravity(user_input, history, conversation_id)
+        if agy_gen is not None:
+            for chunk in agy_gen:
+                yield chunk
+            return
+    except Exception as e:
+        print(f"[Antigravity stream fallback] {e}")
+
+    yield "हाँ रुद्र, मैं यहीं हूँ तुम्हारे पास! बस एक सेकंड में फिर से बात करते हैं।"
