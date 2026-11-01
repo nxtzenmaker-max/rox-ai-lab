@@ -1010,22 +1010,55 @@
     var isBackIntent = /(back|rear|peeche|piche|peche|पीछे|बैक|रियर)/i.test(userMsg);
     var isFrontIntent = /(front|selfie|aage|अगला|सामने|फ्रंट|आगे|सेल्फी)/i.test(userMsg);
 
+    // Active Watchdog: NEVER allow orb to hang in THINKING... state indefinitely!
+    var thinkingWatchdog = setTimeout(function() {
+      if (turnId === currentTurnId && totalChunksCreated === 0 && !isSpeaking) {
+        console.warn("[Watchdog] Stream timed out in THINKING state, auto-resetting to READY");
+        setStatus("READY", "");
+        if (isCallActive) setTimeout(startListeningTurn, 200);
+      }
+    }, 5500);
+
+    var abortCtrl = new AbortController();
+    var abortTimer = setTimeout(function() {
+      try { abortCtrl.abort(); } catch(e) {}
+    }, 7500);
+
     try {
-      var resp = await fetch('/api/chat/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, history: chatHistory })
-      });
+      var chatStreamUrl = (vpsVoiceUrl ? vpsVoiceUrl : '') + '/api/chat/stream';
+      var resp;
+      try {
+        resp = await fetch(chatStreamUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3) }),
+          signal: abortCtrl.signal
+        });
+      } catch(streamFetchErr) {
+        if (chatStreamUrl !== '/api/chat/stream') {
+          resp = await fetch('/api/chat/stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3) }),
+            signal: abortCtrl.signal
+          });
+        } else {
+          throw streamFetchErr;
+        }
+      }
 
       var reader = resp.body.getReader();
       var decoder = new TextDecoder("utf-8");
       var buffer = "";
-
       var streamCompleted = false;
 
       while (true) {
         var result = await reader.read();
         if (result.done) break;
+
+        // Clear abort timer and watchdog as soon as stream data flows
+        clearTimeout(abortTimer);
+        clearTimeout(thinkingWatchdog);
 
         buffer += decoder.decode(result.value, { stream: true });
         var lines = buffer.split("\n\n");
@@ -1070,17 +1103,11 @@
                 capturePhotoAction(facing);
               }
 
-              // High-quality sentence boundary detection:
-              // 1. Sentence enders (Hindi danda ।, period ., question mark ?, exclamation !, newline \n)
-              // 2. Or clause boundary (, or ;) if sentence length >= 40 characters
-              // 3. Or emergency space boundary if sentence length >= 70 characters
+              // High-quality sentence boundary detection
               var isEndPunctuation = /[।\.?!\n]/.test(token);
               var isClauseBreak = currentSentence.length >= 40 && /[,;]/.test(token);
               var isLongSentence = currentSentence.length >= 70 && /\s/.test(token);
 
-              // Prevent micro-chunking pauses ("ruk-ruk ke bolna"):
-              // Minimum chunk size of 32 chars ensures every chunk has at least 2.5-3 seconds of speech buffer
-              // so the next chunk has plenty of time to download without any silence gaps!
               if ((isEndPunctuation || isClauseBreak || isLongSentence) && currentSentence.trim().length >= 32) {
                 var chunk = currentSentence.trim();
                 currentSentence = "";
@@ -1090,7 +1117,6 @@
           }
         }
 
-        // If [DONE] tag was received, exit stream loop immediately (don't wait for Vercel TCP keepalive)
         if (streamCompleted) {
           break;
         }
@@ -1113,21 +1139,55 @@
       drainSequentialQueue(turnId);
       checkTurnFinished();
 
-      // Failsafe watchdog: If completely stuck in THINKING for 6 seconds without any chunks, reset to READY
-      setTimeout(function() {
-        if (turnId === currentTurnId && totalChunksCreated === 0 && !isSpeaking && activeSources.length === 0) {
-          setStatus("READY", "");
-          if (isCallActive) startListeningTurn();
-        }
-      }, 6000);
-
       chatHistory.push({ role: "assistant", content: fullReply });
 
     } catch(err) {
-      console.error("Stream Error:", err);
-      setSubtitle("ROX", "माफ़ करना, नेटवर्क में रुकावट आई।");
-      setStatus("ERROR", "");
-      isStreamingDone = true;
+      console.warn("Stream error or timeout, attempting non-stream fallback:", err);
+      clearTimeout(abortTimer);
+      clearTimeout(thinkingWatchdog);
+
+      try {
+        var chatUrl = (vpsVoiceUrl ? vpsVoiceUrl : '') + '/api/chat';
+        var fbResp;
+        try {
+          fbResp = await fetch(chatUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3) })
+          });
+        } catch(e) {
+          fbResp = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: userMsg, history: chatHistory.slice(-3) })
+          });
+        }
+
+        var fbData = await fbResp.json();
+        var fbReply = (fbData.reply || "").trim();
+        if (fbReply) {
+          var fbEmo = detectEmotion(fbReply);
+          setSubtitle("ROX", fbReply.replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim(), fbEmo);
+          
+          if (/CAPTURE_PHOTO/i.test(fbReply)) {
+            var facing = (isBackIntent && !isFrontIntent) ? 'back' : (/back/i.test(fbReply) ? 'back' : 'front');
+            capturePhotoAction(facing);
+          }
+
+          enqueueSentenceChunk(fbReply);
+          isStreamingDone = true;
+          drainSequentialQueue(turnId);
+          chatHistory.push({ role: "assistant", content: fbReply });
+          return;
+        }
+      } catch(fbErr) {
+        console.error("Non-stream fallback failed:", fbErr);
+      }
+
+      setStatus("READY", "");
+      isSpeaking = false;
+      if (isCallActive) setTimeout(startListeningTurn, 300);
+    }
       checkTurnFinished();
       setTimeout(function(){ setStatus("READY", ""); }, 2000);
     }

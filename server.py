@@ -130,6 +130,26 @@ async def chat_endpoint(req: ChatRequest):
 @app.post("/api/chat/stream")
 async def chat_stream_endpoint(req: ChatRequest):
     threading.Thread(target=save_message, args=("user", req.message), daemon=True).start()
+
+    # If running on Vercel, proxy the stream to high-speed Railway VPS
+    if not is_running_on_vps():
+        vps_url = get_vps_voice_url()
+        if vps_url:
+            try:
+                async def vps_proxy_generator():
+                    async with aiohttp.ClientSession() as session:
+                        async with session.post(f"{vps_url}/api/chat/stream", json={"message": req.message, "history": req.history}, timeout=12) as resp:
+                            async for chunk in resp.content.iter_any():
+                                yield chunk
+                return StreamingResponse(
+                    vps_proxy_generator(),
+                    media_type="text/event-stream",
+                    headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"}
+                )
+            except Exception as e:
+                print(f"[Vercel -> VPS Stream Fallback] {e}")
+
+    # Process locally on VPS (or fallback on Vercel)
     def event_generator():
         full_tokens = []
         for token in stream_ai_response(req.message, req.history):
@@ -138,7 +158,11 @@ async def chat_stream_endpoint(req: ChatRequest):
             yield f"data: {payload}\n\n"
         threading.Thread(target=save_message, args=("assistant", "".join(full_tokens)), daemon=True).start()
         yield "data: [DONE]\n\n"
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"}
+    )
 
 @app.post("/api/photos/log")
 async def log_photo_endpoint(req: PhotoLogRequest):
