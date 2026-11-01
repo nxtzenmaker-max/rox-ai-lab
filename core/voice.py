@@ -1,4 +1,5 @@
 import os
+import re
 import aiohttp
 import edge_tts
 import io
@@ -14,23 +15,65 @@ HARDCODED_DEEPGRAM_VOICE = "flux-shreya-hi"
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "").strip() or HARDCODED_DEEPGRAM_KEY
 DEFAULT_AURA_VOICE = os.getenv("DEEPGRAM_VOICE", "").strip() or HARDCODED_DEEPGRAM_VOICE
 
+def sanitize_speech_text(text: str) -> str:
+    """Cleans technical code, terminal logs, URLs, and JSON artifacts before sending to TTS."""
+    if not text:
+        return ""
+    # Strip terminal tags
+    text = re.sub(r'\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)', '', text)
+    # Strip error logs and timestamps
+    text = re.sub(r'\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}[,\d]*\s*\[(?:INFO|WARNING|ERROR|DEBUG)\][^\n\r]*', '', text)
+    # Strip python code keywords/statements
+    text = re.sub(r'(?:elif|if|def|class|import|from|return|pass|except|print)\s+[^\n\r]*', '', text)
+    # Strip code blocks and inline code
+    text = re.sub(r'```[\s\S]*?```', '', text)
+    text = re.sub(r'`[^`]*`', '', text)
+    # Strip URLs
+    text = re.sub(r'https?://\S+|ws://\S+', '', text)
+    # Strip tags
+    text = re.sub(r'\[(?:ACTION|EMOTION):[^\]]+\]', '', text)
+    # Strip file paths
+    text = re.sub(r'(?:file://\S+|/[a-zA-Z0-9_\-\.]+(?:/[a-zA-Z0-9_\-\.]+)+)', '', text)
+    # Strip leftover brackets, braces, quotes, backslashes
+    text = re.sub(r'[{}\[\]\\\"`~*#|<>]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    # Take only first 1-2 conversational sentences (max ~180 chars) to prevent 429 rate limit
+    if len(text) > 180:
+        sentences = re.split(r'([।\.?!])', text)
+        collected = []
+        cur_len = 0
+        for i in range(0, len(sentences)-1, 2):
+            s = (sentences[i] + sentences[i+1]).strip()
+            if cur_len + len(s) > 160:
+                break
+            collected.append(s)
+            cur_len += len(s)
+        if collected:
+            text = " ".join(collected).strip()
+        else:
+            text = text[:150].rsplit(' ', 1)[0] + "।"
+    return text
+
 async def generate_speech(text: str, audio_format: str = "mp3") -> bytes:
     """
-    Synthesize speech using Deepgram Aura TTS if key is present,
-    otherwise fallback to Edge-TTS (free, zero-config).
-    
-    audio_format: 'mp3' (for web) or 'mulaw' (8000Hz, for Twilio).
+    Synthesize speech using Deepgram Aura TTS (female) if key is present,
+    otherwise fallback to Edge-TTS hi-IN-SwaraNeural (female, zero-config).
+    Never uses old male voices or sends code/terminal dumps to TTS.
     """
+    clean_text = sanitize_speech_text(text)
+    if not clean_text:
+        clean_text = "जी बॉस!"
+
     api_key = os.getenv("DEEPGRAM_API_KEY", "").strip() or HARDCODED_DEEPGRAM_KEY
-    
     if api_key:
         try:
-            return await generate_deepgram_tts(text, api_key=api_key, audio_format=audio_format)
+            return await generate_deepgram_tts(clean_text, api_key=api_key, audio_format=audio_format)
         except Exception as e:
-            print(f"[Voice] Deepgram failed, falling back to Edge-TTS: {e}")
+            print(f"[Voice] Deepgram failed, falling back to Edge-TTS (Swara): {e}")
 
-    # Fallback to Edge-TTS (mp3 format)
-    return await generate_edge_tts(text)
+    # Fallback to Edge-TTS hi-IN-SwaraNeural (always female, sweet Hindi voice)
+    return await generate_edge_tts(clean_text, voice="hi-IN-SwaraNeural")
 
 async def generate_deepgram_tts(text: str, api_key: str, audio_format: str = "mp3") -> bytes:
     """Uses Deepgram v1/v2 speak with ultra-fast latency."""
@@ -61,8 +104,8 @@ async def generate_deepgram_tts(text: str, api_key: str, audio_format: str = "mp
                 raise Exception(f"Deepgram TTS API error ({resp.status}): {err_text}")
             return await resp.read()
 
-async def generate_edge_tts(text: str, voice: str = "hi-IN-MadhurNeural") -> bytes:
-    """Free Edge-TTS generator."""
+async def generate_edge_tts(text: str, voice: str = "hi-IN-SwaraNeural") -> bytes:
+    """Free Edge-TTS generator using natural female Hindi voice (Swara)."""
     communicate = edge_tts.Communicate(text, voice)
     audio_stream = io.BytesIO()
     async for chunk in communicate.stream():

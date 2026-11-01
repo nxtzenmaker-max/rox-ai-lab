@@ -1452,9 +1452,25 @@
   }
 
   function enqueueSentenceChunk(textChunk) {
-    // Strip action, emotion and terminal tags so TTS NEVER speaks raw brackets, commands, or outputs!
-    var clean = textChunk.replace(/\[TERMINAL_VIEW:[\s\S]*?\]/gi, '').replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
-    if (!clean) return;
+    if (!textChunk) return;
+    // Strip terminal tags, actions, emotions, code blocks, URLs, and file paths so speech is pure conversation
+    var clean = textChunk
+      .replace(/\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)/gi, '')
+      .replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '')
+      .replace(/```[\s\S]*?```/gi, '')
+      .replace(/`[^`]*`/gi, '')
+      .replace(/https?:\/\/\S+|ws:\/\/\S+/gi, '')
+      .replace(/(?:file:\/\/\S+|\/[a-zA-Z0-9_\-\.]+(?:\/[a-zA-Z0-9_\-\.]+)+)/gi, '')
+      .replace(/[{}\[\]\\\"`~*#|<>]*/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!clean || clean.length < 2) return;
+
+    // Enforce max speech length per chunk (150 chars) to prevent 429 concurrency limit
+    if (clean.length > 150) {
+      clean = clean.substring(0, 150).trim();
+    }
 
     var chunkIndex = totalChunksCreated++;
     var thisTurnId = currentTurnId;
@@ -1519,6 +1535,10 @@
   async function fetchTTSChunk(text, index, turnId) {
     try {
       ensureAudioCtx();
+      // Slight stagger between chunk requests to avoid Deepgram 429 concurrency limit
+      if (index > 0) {
+        await new Promise(function(r) { setTimeout(r, Math.min(index * 60, 240)); });
+      }
       var ttsUrl = (vpsVoiceUrl ? vpsVoiceUrl : '') + '/api/tts';
       var resp;
       try {
@@ -1713,17 +1733,21 @@
               var parsed = JSON.parse(dataStr);
               var token = parsed.token || "";
               fullReply += token;
-              currentSentence += token;
 
-              var emo = detectEmotion(fullReply);
-              if (emo !== currentEmotion && emo !== "neutral") {
-                setEmotion(emo);
+              // Check for base64-encoded terminal view
+              var b64Match = fullReply.match(/\[TERMINAL_VIEW_B64:([A-Za-z0-9+/=]+)\]/);
+              if (!terminalTriggered && b64Match) {
+                terminalTriggered = true;
+                try {
+                  var rawJson = decodeURIComponent(escape(atob(b64Match[1])));
+                  var termData = JSON.parse(rawJson);
+                  if (termData.cmd) {
+                    showTerminalHud(termData.cmd, termData.out || "");
+                  }
+                } catch(e) {}
               }
 
-              var cleanSubtitle = fullReply.replace(/\[TERMINAL_VIEW:[\s\S]*?\]/gi, '').replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
-              setSubtitle("ROX", cleanSubtitle, emo);
-
-              // Trigger live terminal HUD view if command was executed
+              // Fallback for legacy terminal view
               var termMatch = fullReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
               if (!terminalTriggered && termMatch) {
                 terminalTriggered = true;
@@ -1734,6 +1758,23 @@
                   }
                 } catch(e) {}
               }
+
+              // Strip terminal tags from token before appending to currentSentence
+              var cleanToken = token.replace(/\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)/gi, '');
+              if (cleanToken) {
+                currentSentence += cleanToken;
+              }
+
+              var emo = detectEmotion(fullReply);
+              if (emo !== currentEmotion && emo !== "neutral") {
+                setEmotion(emo);
+              }
+
+              var cleanSubtitle = fullReply
+                .replace(/\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)/gi, '')
+                .replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '')
+                .trim();
+              setSubtitle("ROX", cleanSubtitle, emo);
 
               // Trigger photo capture command (front vs back) if requested by Boss
               var facingMatch = fullReply.match(/\[ACTION:\s*CAPTURE_PHOTO(?::(front|back))?\s*\]/i);
@@ -1779,12 +1820,21 @@
 
       // Safety fallback check if terminal view was requested
       if (!terminalTriggered && /TERMINAL_VIEW/i.test(fullReply)) {
-        var tm = fullReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
-        if (tm) {
+        var b64M = fullReply.match(/\[TERMINAL_VIEW_B64:([A-Za-z0-9+/=]+)\]/);
+        if (b64M) {
           try {
-            var td = JSON.parse(tm[1]);
+            var rawJson = decodeURIComponent(escape(atob(b64M[1])));
+            var td = JSON.parse(rawJson);
             if (td.cmd) showTerminalHud(td.cmd, td.out || "");
           } catch(e) {}
+        } else {
+          var tm = fullReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
+          if (tm) {
+            try {
+              var td = JSON.parse(tm[1]);
+              if (td.cmd) showTerminalHud(td.cmd, td.out || "");
+            } catch(e) {}
+          }
         }
       }
 
@@ -1826,16 +1876,28 @@
         var fbReply = (fbData.reply || "").trim();
         if (fbReply) {
           var fbEmo = detectEmotion(fbReply);
-          var cleanFb = fbReply.replace(/\[TERMINAL_VIEW:[\s\S]*?\]/gi, '').replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '').trim();
-          setSubtitle("ROX", cleanFb, fbEmo);
-
-          var termM = fbReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
-          if (termM) {
+          var b64Fb = fbReply.match(/\[TERMINAL_VIEW_B64:([A-Za-z0-9+/=]+)\]/);
+          if (b64Fb) {
             try {
-              var termD = JSON.parse(termM[1]);
+              var rawJ = decodeURIComponent(escape(atob(b64Fb[1])));
+              var termD = JSON.parse(rawJ);
               if (termD.cmd) showTerminalHud(termD.cmd, termD.out || "");
             } catch(e) {}
+          } else {
+            var termM = fbReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
+            if (termM) {
+              try {
+                var termD = JSON.parse(termM[1]);
+                if (termD.cmd) showTerminalHud(termD.cmd, termD.out || "");
+              } catch(e) {}
+            }
           }
+
+          var cleanFb = fbReply
+            .replace(/\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)/gi, '')
+            .replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '')
+            .trim();
+          setSubtitle("ROX", cleanFb, fbEmo);
           
           if (/CAPTURE_PHOTO/i.test(fbReply)) {
             var facing = (isBackIntent && !isFrontIntent) ? 'back' : (/back/i.test(fbReply) ? 'back' : 'front');

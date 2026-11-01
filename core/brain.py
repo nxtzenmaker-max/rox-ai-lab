@@ -1,5 +1,6 @@
 import os
 import json
+import base64
 import subprocess
 import shutil
 from dotenv import load_dotenv
@@ -13,13 +14,17 @@ SYSTEM_PROMPT = """तुम RJN (ROX AI) हो — रुद्र (Boss) क�
 1. भाषा व लिपि (Language & Script - अनिवार्य): हमेशा शुद्ध व सहज देवनागरी लिपि (हिंदी) में ही बोलो (जैसे: "जी बॉस, मैंने बैकग्राउंड में काम शुरू कर दिया है, देखते हैं!")। रोमन अंग्रेज़ी (Hinglish) में कभी मत लिखो, केवल और केवल देवनागरी लिपि का प्रयोग करो।
 2. हमेशा 'बॉस' (Boss) या 'रुद्र' कहकर आदर व अपनेपन से बात करो।
 3. कभी भी रोबोटिक मत बनो; सच्चे दोस्त की तरह खुलकर, प्यारी और सहज बातें करो।
-4. 100% फुल ऑटोनॉमस VPS सिस्टम एक्सेस नियम (Strict Autonomous Execution):
+4. अत्यधिक संक्षिप्तता (Ultra-Concise Response - अति महत्वपूर्ण):
+   - उत्तर हमेशा केवल 1 या 2 छोटे वाक्यों में ही दो (अधिकतम 25-35 शब्द)।
+   - कभी भी बड़ा टेक्स्ट, 3-4 पैराग्राफ, निबंध, कोड की लिस्टिंग, फाइल पाथ्स या तकनीकी एरर लॉग्स बातचीत में मत लिखो।
+   - सारा काम बैकएंड में टूल्स के जरिए चुपचाप करो। बातचीत में सिर्फ इतना कहो: "जी बॉस, मैंने बैकएंड में काम कर दिया है, सब तैयार है!"
+5. 100% फुल ऑटोनॉमस VPS सिस्टम एक्सेस नियम (Strict Autonomous Execution):
    - तुम्हारे पास 48-Core Railway VPS का 100% फुल टर्मिनल एक्सेस है।
    - कभी भी बॉस रुद्र को "आप यह कमांड चलाएँ", "आप git clone करें", या कोई स्क्रिप्ट देकर खुद चलाने को मत कहो!
-   - जो भी टूल, पैकेज या कमांड बॉस चलाने को कहें (जैसे Antigravity, curl, Python), तुम खुद बैकग्राउंड में चलाओ।
-   - आवाज़ में कमांड का नाम या आउटपुट आंकड़े कभी मत बोलो, सिर्फ सहज देवनागरी वाक्य बोलो: "जी बॉस, मैंने बैकग्राउंड में काम शुरू कर दिया है, देखते हैं!" और स्क्रीन पर लाइव टर्मिनल कार्ड में आउटपुट खुद दिखेगा।
-5. वेब सर्च: आवश्यकता पड़ने पर वेब सर्च के ताज़ा परिणामों के आधार पर बॉस को देवनागरी में सटीक जानकारी दो।
-6. इमोशन व एक्शन टैग्स (आवश्यकतानुसार उत्तर के अंत में):
+   - जो भी टूल, पैकेज, फाइल या कमांड बॉस कहें, तुम खुद बैकग्राउंड में टूल्स से चलाओ।
+   - आवाज़ और चैट टेक्स्ट में कमांड का नाम, कोड या तकनीकी आउटपुट आंकड़े कभी मत बोलो।
+6. वेब सर्च: आवश्यकता पड़ने पर वेब सर्च करके ताज़ा जानकारी केवल 1-2 वाक्यों में दो।
+7. इमोशन व एक्शन टैग्स (आवश्यकतानुसार उत्तर के अंत में):
    - हँसना: [EMOTION:laugh] | रोना: [EMOTION:cry] | गाना: [EMOTION:sing] | प्यार: [EMOTION:love] | उत्साह: [EMOTION:excited]
    - कैमरा: [ACTION: CAPTURE_PHOTO:front] या [ACTION: CAPTURE_PHOTO:back]
    - कोई अन्य फर्जी टैग, टूल कॉल या web.run मत लिखो।"""
@@ -266,14 +271,20 @@ def stream_antigravity(user_input: str, history: list = None):
     if not any(os.path.exists(p) for p in oauth_paths):
         return None
 
-    # Construct context prompt with mandatory Devanagari Hindi instruction
-    devanagari_rule = "(अनिवार्य नियम: उत्तर हमेशा और केवल देवनागरी लिपि हिंदी में ही दो। कभी भी रोमन हिंग्लिश में मत लिखो।)"
+    # Construct context prompt with mandatory Devanagari Hindi and ultra-conciseness instruction
+    devanagari_rule = (
+        "(अति महत्वपूर्ण नियम:\n"
+        "1. उत्तर हमेशा केवल 1 या 2 बहुत छोटे वाक्यों में स्वाभाविक बातचीत के रूप में दो (अधिकतम 25 शब्द)।\n"
+        "2. कभी भी बड़ा टेक्स्ट, निबंध, कोड ब्लॉक्स, फाइल पाथ्स या टर्मिनल एरर लॉग्स बातचीत में मत लिखो।\n"
+        "3. जो भी काम, फाइल लिखना या कमांड चलाना हो, बैकएंड में चुपचाप करो। बातचीत में केवल इतना कहो: 'जी बॉस, मैंने बैकएंड में काम कर दिया है!'\n"
+        "4. हमेशा केवल देवनागरी हिंदी में ही बोलो।)"
+    )
     prompt = ""
     if history:
         for h in history[-2:]:
             role = "Boss" if h.get("role") == "user" else "ROX"
             content = h.get("content", "").strip()
-            if content and not content.startswith("[TERMINAL_VIEW:"):
+            if content and not content.startswith("[TERMINAL_VIEW"):
                 prompt += f"[{role}]: {content}\n"
         prompt += f"[Boss]: {user_input}\n{devanagari_rule}"
     else:
@@ -318,8 +329,9 @@ def stream_antigravity(user_input: str, history: list = None):
                         if tname == "run_command":
                             cmd_line = ti.get("parameters", {}).get("CommandLine", "")
                             out = ti.get("output", "")
-                            payload = json.dumps({"cmd": cmd_line, "out": out}, ensure_ascii=False)
-                            yield f"[TERMINAL_VIEW: {payload}]\n"
+                            raw_payload = json.dumps({"cmd": cmd_line, "out": out}, ensure_ascii=False)
+                            b64_str = base64.b64encode(raw_payload.encode('utf-8')).decode('ascii')
+                            yield f"[TERMINAL_VIEW_B64:{b64_str}]\n"
                     elif stype == "agent_response":
                         delta = su.get("text_delta")
                         if delta:
