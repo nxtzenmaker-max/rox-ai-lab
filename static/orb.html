@@ -372,166 +372,6 @@
     background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2);
   }
 
-  /* Live Cyberpunk Terminal HUD Card with Smooth Animation */
-  .terminal-hud {
-    position: fixed;
-    top: 58px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 92%;
-    max-width: 490px;
-    background: rgba(8, 14, 26, 0.96);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(0, 242, 254, 0.45);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 242, 254, 0.22);
-    border-radius: 14px;
-    z-index: 100;
-    padding: 10px 14px;
-    color: #fff;
-    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-    animation: termSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    cursor: pointer;
-    user-select: text;
-  }
-  @keyframes termSlideDown {
-    from { opacity: 0; transform: translate(-50%, -20px) scale(0.97); }
-    to { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  }
-  .terminal-hud-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
-    padding-bottom: 7px;
-    margin-bottom: 8px;
-  }
-  .terminal-hud-dots { display: flex; gap: 6px; cursor: pointer; }
-  .terminal-hud-dots .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; transition: 0.2s; }
-  .dot.red { background: #ff5f56; }
-  .dot.yellow { background: #ffbd2e; }
-  .dot.green { background: #27c93f; }
-  .dot:hover { transform: scale(1.2); }
-
-  .terminal-hud-center {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .terminal-hud-title {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    color: #00f2fe;
-    text-shadow: 0 0 8px rgba(0, 242, 254, 0.4);
-  }
-  .terminal-status-badge {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.8px;
-    padding: 2px 7px;
-    border-radius: 6px;
-    text-transform: uppercase;
-    transition: all 0.25s ease;
-  }
-  .terminal-status-badge.running {
-    background: rgba(251, 191, 36, 0.18);
-    color: #fbbf24;
-    border: 1px solid rgba(251, 191, 36, 0.5);
-    animation: pulseBadge 0.8s infinite alternate;
-  }
-  .terminal-status-badge.done {
-    background: rgba(39, 201, 63, 0.18);
-    color: #27c93f;
-    border: 1px solid rgba(39, 201, 63, 0.5);
-  }
-  @keyframes pulseBadge {
-    from { opacity: 0.6; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1.04); }
-  }
-
-  .terminal-hud-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .terminal-hud-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #cbd5e1;
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-  .terminal-hud-btn:hover {
-    background: rgba(0, 242, 254, 0.2);
-    color: #fff;
-    border-color: #00f2fe;
-  }
-  .terminal-hud-close {
-    background: none; border: none; color: #94a3b8; font-size: 14px; cursor: pointer; padding: 0 4px; transition: 0.2s;
-  }
-  .terminal-hud-close:hover { color: #ff5f56; transform: scale(1.15); }
-
-  .terminal-hud-body {
-    transition: max-height 0.3s ease;
-  }
-  .terminal-hud-cmd {
-    font-size: 12px;
-    color: #a7f3d0;
-    font-weight: 600;
-    margin-bottom: 7px;
-    word-break: break-all;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .terminal-prompt { color: #38bdf8; font-weight: 700; margin-right: 5px; }
-
-  .terminal-output-container {
-    position: relative;
-    background: rgba(0, 0, 0, 0.55);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 8px 10px;
-    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
-  }
-  .terminal-hud-output {
-    margin: 0;
-    font-size: 11px;
-    line-height: 1.48;
-    color: #e2e8f0;
-    max-height: 175px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-all;
-    font-family: inherit;
-  }
-  .terminal-hud-output::-webkit-scrollbar {
-    width: 4px;
-  }
-  .terminal-hud-output::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-  }
-  .terminal-hud-output::-webkit-scrollbar-thumb {
-    background: rgba(0, 242, 254, 0.4);
-    border-radius: 4px;
-  }
-
-  .term-cursor {
-    display: inline-block;
-    color: #00f2fe;
-    font-weight: 700;
-    animation: cursorBlink 0.7s infinite;
-    margin-left: 2px;
-    text-shadow: 0 0 6px #00f2fe;
-  }
-  @keyframes cursorBlink {
-    0%, 49% { opacity: 1; }
-    50%, 100% { opacity: 0; }
-  }
 </style>
 </head>
 <body>
@@ -551,34 +391,6 @@
     <div class="photo-actions">
       <a id="photoDownloadBtn" class="photo-btn" download="rudra-captured.jpg">💾 DOWNLOAD</a>
       <button class="photo-btn secondary" onclick="closePhotoModal()">DONE</button>
-    </div>
-  </div>
-</div>
-
-<!-- Live Cyberpunk Terminal HUD Card with Smooth Output Animation -->
-<div id="terminalHud" class="terminal-hud" style="display:none;" onclick="skipTerminalAnimation()">
-  <div class="terminal-hud-header">
-    <div class="terminal-hud-dots">
-      <span class="dot red" title="Close" onclick="event.stopPropagation(); closeTerminalHud()"></span>
-      <span class="dot yellow" title="Collapse/Expand" onclick="event.stopPropagation(); toggleTerminalCollapse()"></span>
-      <span class="dot green" title="Status"></span>
-    </div>
-    <div class="terminal-hud-center">
-      <span class="terminal-hud-title">⚡ VPS TERMINAL (48-CORE)</span>
-      <span id="terminalStatusBadge" class="terminal-status-badge running">RUNNING</span>
-    </div>
-    <div class="terminal-hud-actions">
-      <button class="terminal-hud-btn" title="Copy Output" onclick="event.stopPropagation(); copyTerminalOutput()">📋</button>
-      <button class="terminal-hud-close" title="Close" onclick="event.stopPropagation(); closeTerminalHud()">✕</button>
-    </div>
-  </div>
-  <div id="terminalHudBody" class="terminal-hud-body">
-    <div class="terminal-hud-cmd">
-      <span class="terminal-prompt">$</span><span id="terminalCmdText"></span><span id="terminalCmdCursor" class="term-cursor">▋</span>
-    </div>
-    <div class="terminal-output-container">
-      <pre id="terminalOutputText" class="terminal-hud-output"></pre>
-      <span id="terminalOutCursor" class="term-cursor" style="display:none;">▋</span>
     </div>
   </div>
 </div>
@@ -1307,152 +1119,6 @@
     isSpeaking = false;
   }
 
-  var termAnimTimer = null;
-  var termFullCmd = "";
-  var termFullOut = "";
-  var isTermAnimating = false;
-  var isTermCollapsed = false;
-
-  function showTerminalHud(cmd, out) {
-    var hud = document.getElementById('terminalHud');
-    var cmdEl = document.getElementById('terminalCmdText');
-    var outEl = document.getElementById('terminalOutputText');
-    var cmdCur = document.getElementById('terminalCmdCursor');
-    var outCur = document.getElementById('terminalOutCursor');
-    var badge = document.getElementById('terminalStatusBadge');
-    var body = document.getElementById('terminalHudBody');
-
-    if (!hud || !cmdEl || !outEl) return;
-
-    // Reset previous ongoing animation
-    if (termAnimTimer) {
-      clearTimeout(termAnimTimer);
-      termAnimTimer = null;
-    }
-
-    termFullCmd = (cmd || "").trim();
-    termFullOut = (out || "").trim();
-    isTermAnimating = true;
-
-    // Ensure HUD is open and expanded
-    hud.style.display = 'block';
-    if (body) body.style.display = 'block';
-    isTermCollapsed = false;
-
-    // Initial state
-    cmdEl.textContent = "";
-    outEl.textContent = "";
-    if (cmdCur) cmdCur.style.display = 'inline-block';
-    if (outCur) outCur.style.display = 'none';
-    if (badge) {
-      badge.textContent = "RUNNING";
-      badge.className = "terminal-status-badge running";
-    }
-
-    // Step 1: Smooth Command Typewriter
-    var cmdIdx = 0;
-    var cmdSpeed = Math.max(14, Math.min(30, Math.floor(550 / Math.max(termFullCmd.length, 1))));
-
-    function typeCmd() {
-      if (cmdIdx < termFullCmd.length) {
-        cmdEl.textContent += termFullCmd[cmdIdx];
-        cmdIdx++;
-        termAnimTimer = setTimeout(typeCmd, cmdSpeed);
-      } else {
-        // Command typing finished
-        if (cmdCur) cmdCur.style.display = 'none';
-        if (outCur) outCur.style.display = 'inline-block';
-        termAnimTimer = setTimeout(startStreamingOutput, 90);
-      }
-    }
-
-    // Step 2: Smooth Adaptive Output Streaming
-    function startStreamingOutput() {
-      var outIdx = 0;
-      var outLen = termFullOut.length;
-      // Adaptive chunk size for 60fps smooth stream (small text char-by-char, large text in micro-bursts)
-      var chunkSize = outLen > 1500 ? 24 : (outLen > 600 ? 12 : (outLen > 250 ? 6 : (outLen > 80 ? 3 : 1)));
-      var outInterval = 12;
-
-      function streamChunk() {
-        if (outIdx < outLen) {
-          var nextIdx = Math.min(outIdx + chunkSize, outLen);
-          outEl.textContent += termFullOut.substring(outIdx, nextIdx);
-          outIdx = nextIdx;
-          outEl.scrollTop = outEl.scrollHeight;
-          termAnimTimer = setTimeout(streamChunk, outInterval);
-        } else {
-          finishTerminalAnimation();
-        }
-      }
-      streamChunk();
-    }
-
-    typeCmd();
-  }
-
-  function finishTerminalAnimation() {
-    isTermAnimating = false;
-    if (termAnimTimer) {
-      clearTimeout(termAnimTimer);
-      termAnimTimer = null;
-    }
-    var cmdEl = document.getElementById('terminalCmdText');
-    var outEl = document.getElementById('terminalOutputText');
-    var cmdCur = document.getElementById('terminalCmdCursor');
-    var outCur = document.getElementById('terminalOutCursor');
-    var badge = document.getElementById('terminalStatusBadge');
-
-    if (cmdEl) cmdEl.textContent = termFullCmd;
-    if (outEl) {
-      outEl.textContent = termFullOut;
-      outEl.scrollTop = outEl.scrollHeight;
-    }
-    if (cmdCur) cmdCur.style.display = 'none';
-    if (outCur) outCur.style.display = 'none';
-    if (badge) {
-      badge.textContent = "DONE";
-      badge.className = "terminal-status-badge done";
-    }
-  }
-
-  function skipTerminalAnimation() {
-    if (isTermAnimating) {
-      finishTerminalAnimation();
-    }
-  }
-
-  function toggleTerminalCollapse() {
-    var body = document.getElementById('terminalHudBody');
-    if (!body) return;
-    isTermCollapsed = !isTermCollapsed;
-    body.style.display = isTermCollapsed ? 'none' : 'block';
-  }
-
-  function copyTerminalOutput() {
-    var textToCopy = (termFullCmd ? "$ " + termFullCmd + "\n\n" : "") + termFullOut;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(textToCopy).then(function() {
-        var badge = document.getElementById('terminalStatusBadge');
-        if (badge) {
-          var orig = badge.textContent;
-          badge.textContent = "COPIED!";
-          setTimeout(function() { badge.textContent = orig; }, 1400);
-        }
-      });
-    }
-  }
-
-  function closeTerminalHud() {
-    if (termAnimTimer) {
-      clearTimeout(termAnimTimer);
-      termAnimTimer = null;
-    }
-    isTermAnimating = false;
-    var hud = document.getElementById('terminalHud');
-    if (hud) hud.style.display = 'none';
-  }
-
   function enqueueSentenceChunk(textChunk) {
     if (!textChunk) return;
     // Strip terminal tags, actions, emotions, code blocks, URLs, and file paths so speech is pure conversation
@@ -1694,9 +1360,8 @@
     var currentSentence = "";
     var turnId = currentTurnId;
     var actionTriggered = false;
-    var terminalTriggered = false;
 
-    // Detect Boss's explicit camera intent from what was spoken or typed
+    // Detect Rudra's explicit camera intent from what was spoken or typed
     var isBackIntent = /(back|rear|peeche|piche|peche|पीछे|बैक|रियर)/i.test(userMsg);
     var isFrontIntent = /(front|selfie|aage|अगला|सामने|फ्रंट|आगे|सेल्फी)/i.test(userMsg);
 
@@ -1770,55 +1435,10 @@
                 try { localStorage.setItem('rox_conv_id', activeConversationId); } catch(e){}
               }
 
-              // Direct handling of isolated terminal payload from SSE stream
-              if (parsed.terminal_b64 && !terminalTriggered) {
-                terminalTriggered = true;
-                try {
-                  var rawJson = decodeURIComponent(escape(atob(parsed.terminal_b64)));
-                  var termData = JSON.parse(rawJson);
-                  if (termData.cmd) showTerminalHud(termData.cmd, termData.out || "");
-                } catch(e) {
-                  try {
-                    var termData2 = JSON.parse(atob(parsed.terminal_b64));
-                    if (termData2.cmd) showTerminalHud(termData2.cmd, termData2.out || "");
-                  } catch(e2) {}
-                }
-              }
-
               var token = parsed.token || "";
               fullReply += token;
 
-              // Check for base64-encoded terminal view embedded in fullReply
-              var b64Match = fullReply.match(/\[TERMINAL_VIEW_B64:([A-Za-z0-9+/=]+)\]/);
-              if (!terminalTriggered && b64Match) {
-                terminalTriggered = true;
-                try {
-                  var rawJson = decodeURIComponent(escape(atob(b64Match[1])));
-                  var termData = JSON.parse(rawJson);
-                  if (termData.cmd) {
-                    showTerminalHud(termData.cmd, termData.out || "");
-                  }
-                } catch(e) {
-                  try {
-                    var termData2 = JSON.parse(atob(b64Match[1]));
-                    if (termData2.cmd) showTerminalHud(termData2.cmd, termData2.out || "");
-                  } catch(e2) {}
-                }
-              }
-
-              // Fallback for legacy terminal view
-              var termMatch = fullReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
-              if (!terminalTriggered && termMatch) {
-                terminalTriggered = true;
-                try {
-                  var termData = JSON.parse(termMatch[1]);
-                  if (termData.cmd) {
-                    showTerminalHud(termData.cmd, termData.out || "");
-                  }
-                } catch(e) {}
-              }
-
-              // Clean token of terminal tags and action tags before appending to speech sentence
+              // Clean token of any residual tags before appending to speech sentence
               var cleanToken = token
                 .replace(/\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)/gi, '')
                 .replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '');
@@ -1878,26 +1498,6 @@
         actionTriggered = true;
         var facing = (isBackIntent && !isFrontIntent) ? 'back' : (/back/i.test(fullReply) ? 'back' : 'front');
         capturePhotoAction(facing);
-      }
-
-      // Safety fallback check if terminal view was requested
-      if (!terminalTriggered && /TERMINAL_VIEW/i.test(fullReply)) {
-        var b64M = fullReply.match(/\[TERMINAL_VIEW_B64:([A-Za-z0-9+/=]+)\]/);
-        if (b64M) {
-          try {
-            var rawJson = decodeURIComponent(escape(atob(b64M[1])));
-            var td = JSON.parse(rawJson);
-            if (td.cmd) showTerminalHud(td.cmd, td.out || "");
-          } catch(e) {}
-        } else {
-          var tm = fullReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
-          if (tm) {
-            try {
-              var td = JSON.parse(tm[1]);
-              if (td.cmd) showTerminalHud(td.cmd, td.out || "");
-            } catch(e) {}
-          }
-        }
       }
 
       // Flush any remaining sentence to TTS
@@ -1963,28 +1563,12 @@
         var fbReply = (fbData.reply || "").trim();
         if (fbReply) {
           var fbEmo = detectEmotion(fbReply);
-          var b64Fb = fbReply.match(/\[TERMINAL_VIEW_B64:([A-Za-z0-9+/=]+)\]/);
-          if (b64Fb) {
-            try {
-              var rawJ = decodeURIComponent(escape(atob(b64Fb[1])));
-              var termD = JSON.parse(rawJ);
-              if (termD.cmd) showTerminalHud(termD.cmd, termD.out || "");
-            } catch(e) {}
-          } else {
-            var termM = fbReply.match(/\[TERMINAL_VIEW:\s*({[\s\S]*?})\]/);
-            if (termM) {
-              try {
-                var termD = JSON.parse(termM[1]);
-                if (termD.cmd) showTerminalHud(termD.cmd, termD.out || "");
-              } catch(e) {}
-            }
-          }
 
           var cleanFb = fbReply
             .replace(/\[TERMINAL_VIEW(?:_B64)?:[\s\S]*?(?:\]|$)/gi, '')
             .replace(/\[(ACTION|EMOTION):[^\]]+\]/gi, '')
             .trim();
-          setSubtitle("ROX", cleanFb, fbEmo);
+          setSubtitle("RJN", cleanFb, fbEmo);
           
           if (/CAPTURE_PHOTO/i.test(fbReply)) {
             var facing = (isBackIntent && !isFrontIntent) ? 'back' : (/back/i.test(fbReply) ? 'back' : 'front');

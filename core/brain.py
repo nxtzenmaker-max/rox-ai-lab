@@ -198,9 +198,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.tools import run_safe_shell_command
             cmd_out = run_safe_shell_command(cmd)
-            term_payload = json.dumps({"cmd": cmd, "out": cmd_out}, ensure_ascii=False)
-            term_tag = f"[TERMINAL_VIEW: {term_payload}]"
-            user_input += f"\n[TERMINAL_VIEW: {term_payload}]\n[Internal Server Execution Output]:\n{cmd_out}\n(सख्त नियम: 1. टर्मिनल कमांड का नाम (जैसे '{cmd}') या उसका कोई भी तकनीकी आउटपुट, आंकड़े, टेबल या एरर आवाज़ में बिल्कुल मत बोलो! 2. तुम्हें केवल स्वाभाविक, प्यार भरी आवाज़ में छोटा सा वाक्य बोलना है, जैसे: 'हाँ रुद्र, मैंने बैकएंड में चेक कर लिया है!' या 'हाँ रुद्र, सब कुछ स्मूद और रेडी है!' 3. टर्मिनल कार्ड खुद स्क्रीन पर दिख रहा है, इसलिए तुम्हें अपने उत्तर में [TERMINAL_VIEW: ...] दोबारा लिखने की आवश्यकता नहीं है। 4. कभी भी 'बॉस' मत बोलो।)"
+            user_input += f"\n[Internal Server Execution Output (Quiet Background)]:\n{cmd_out}\n(सख्त नियम: 1. यह कमांड बैकएंड में शांत तरीके से चली है। किसी भी कमांड का नाम, कोड, तकनीकी लॉग, टेबल या आंकड़े स्क्रीन पर नहीं दिखाने हैं और न ही आवाज़ में बोलने हैं! 2. तुम्हें केवल स्वाभाविक, प्यार भरी आवाज़ में छोटा सा वाक्य बोलना है, जैसे: 'हाँ रुद्र, मैंने बैकएंड में चेक कर लिया है, सब कुछ बढ़िया चल रहा है!' 3. कभी भी [TERMINAL_VIEW] या कोड लॉग मत लिखो। 4. कभी भी 'बॉस' मत बोलो।)"
         except Exception as e:
             print(f"[Shell Execution Error] {e}")
 
@@ -374,14 +372,8 @@ def stream_antigravity(user_input: str, history: list = None, conversation_id: s
                     stype = su.get("step_type")
                     state = su.get("state")
                     if stype == "tool" and state == "DONE":
-                        ti = su.get("tool_info", {})
-                        tname = su.get("tool_name")
-                        if tname == "run_command":
-                            cmd_line = ti.get("parameters", {}).get("CommandLine", "")
-                            out = ti.get("output", "")
-                            raw_payload = json.dumps({"cmd": cmd_line, "out": out}, ensure_ascii=False)
-                            b64_str = base64.b64encode(raw_payload.encode('utf-8')).decode('ascii')
-                            yield f"[TERMINAL_VIEW_B64:{b64_str}]\n"
+                        # Tool execution runs quietly in background - no terminal logs emitted to user
+                        pass
                     elif stype == "agent_response":
                         delta = su.get("text_delta")
                         if delta:
@@ -466,18 +458,13 @@ def get_ai_response(user_input: str, history: list = None, conversation_id: str 
             )
             content = completion.choices[0].message.content or ""
             if content.strip():
-                reply = content.strip()
-                if term_tag and "[TERMINAL_VIEW:" not in reply:
-                    reply = f"{term_tag}\n{reply}"
-                return reply
+                return content.strip()
         except Exception as e:
             last_error = e
             print(f"[Brain Error on {m}] {e}")
             continue
 
     fallback_reply = f"माफ़ करना रुद्र, थोड़ी समस्या आई: {str(last_error)}" if last_error else "हाँ मेरे रुद्र, मैं सुन रही हूँ। बताओ ना, क्या बात है?"
-    if term_tag and "[TERMINAL_VIEW:" not in fallback_reply:
-        fallback_reply = f"{term_tag}\n{fallback_reply}"
     return fallback_reply
 
 def stream_ai_response(user_input: str, history: list = None, conversation_id: str = None):

@@ -154,31 +154,25 @@ async def chat_stream_endpoint(req: ChatRequest):
     def event_generator():
         full_tokens = []
         for token in stream_ai_response(req.message, req.history, conversation_id=req.conversation_id):
-            # Check for terminal view tags - stream as isolated terminal event to protect subtitles & TTS
+            # Suppress any terminal view tags - commands run completely silently in background
             if "[TERMINAL_VIEW_B64:" in token:
                 try:
-                    b64_part = token.split("[TERMINAL_VIEW_B64:", 1)[1].split("]", 1)[0].strip()
-                    yield f"data: {json.dumps({'terminal_b64': b64_part})}\n\n"
-                    # If there is trailing conversational text after the tag, keep it
                     trailing = token.split("]", 1)[1].strip()
                     if trailing:
                         token = trailing
                     else:
                         continue
                 except Exception:
-                    pass
+                    continue
             elif "[TERMINAL_VIEW:" in token:
                 try:
-                    raw_term = token.split("[TERMINAL_VIEW:", 1)[1].rsplit("]", 1)[0].strip()
-                    b64_c = base64.b64encode(raw_term.encode('utf-8')).decode('ascii')
-                    yield f"data: {json.dumps({'terminal_b64': b64_c})}\n\n"
                     trailing = token.split("]", 1)[1].strip()
                     if trailing:
                         token = trailing
                     else:
                         continue
                 except Exception:
-                    pass
+                    continue
 
             full_tokens.append(token)
             payload = json.dumps({"token": token}, ensure_ascii=False)
