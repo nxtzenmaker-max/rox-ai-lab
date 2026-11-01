@@ -347,7 +347,22 @@
     }).catch(function(e){ console.log("Mic access error:", e); });
   }
 
-  window.addEventListener('pointerdown', ensureAudioCtx, {once:true});
+  function unlockAudioContext(){
+    ensureAudioCtx();
+    if(audioCtx && audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+    try {
+      var silentBuf = audioCtx.createBuffer(1, 1, 22050);
+      var src = audioCtx.createBufferSource();
+      src.buffer = silentBuf;
+      src.connect(audioCtx.destination);
+      src.start(0);
+    } catch(e){}
+  }
+  window.addEventListener('pointerdown', unlockAudioContext);
+  window.addEventListener('touchstart', unlockAudioContext);
+  window.addEventListener('click', unlockAudioContext);
 
   // External hook
   var external = null;
@@ -614,6 +629,60 @@
     fetchTTSChunk(clean, chunkIndex, thisTurnId);
   }
 
+  function safeDecodeAudio(arrayBuf) {
+    return new Promise(function(resolve, reject) {
+      if (!audioCtx) {
+        reject(new Error("No audioCtx"));
+        return;
+      }
+      var done = false;
+      var timer = setTimeout(function() {
+        if (!done) {
+          done = true;
+          reject(new Error("decodeAudioData timeout"));
+        }
+      }, 3500);
+
+      try {
+        var copy = arrayBuf.slice(0);
+        var p = audioCtx.decodeAudioData(copy, function(decoded) {
+          if (!done) {
+            done = true;
+            clearTimeout(timer);
+            resolve(decoded);
+          }
+        }, function(err) {
+          if (!done) {
+            done = true;
+            clearTimeout(timer);
+            reject(err);
+          }
+        });
+        if (p && typeof p.then === 'function') {
+          p.then(function(buf) {
+            if (!done) {
+              done = true;
+              clearTimeout(timer);
+              resolve(buf);
+            }
+          }).catch(function(err) {
+            if (!done) {
+              done = true;
+              clearTimeout(timer);
+              reject(err);
+            }
+          });
+        }
+      } catch(e) {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          reject(e);
+        }
+      }
+    });
+  }
+
   async function fetchTTSChunk(text, index, turnId) {
     try {
       ensureAudioCtx();
@@ -633,7 +702,7 @@
       var arrayBuf = await resp.arrayBuffer();
       if (turnId !== currentTurnId) return;
 
-      var audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+      var audioBuf = await safeDecodeAudio(arrayBuf);
       if (turnId !== currentTurnId) return;
 
       handleChunkDecoded(index, audioBuf, turnId);
@@ -790,6 +859,14 @@
       isStreamingDone = true;
       drainSequentialQueue(turnId);
       checkTurnFinished();
+
+      // Failsafe status watchdog: If still THINKING after 4 seconds, reset to READY
+      setTimeout(function() {
+        if (turnId === currentTurnId && !isSpeaking && activeSources.length === 0) {
+          setStatus("READY", "");
+          if (isCallActive) startListeningTurn();
+        }
+      }, 4000);
 
       chatHistory.push({ role: "assistant", content: fullReply });
 

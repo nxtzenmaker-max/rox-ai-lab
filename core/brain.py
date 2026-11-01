@@ -42,17 +42,28 @@ _GROQ_BUF = [61, 41, 49, 5, 14, 20, 23, 42, 56, 41, 62, 106, 18, 3, 45, 9, 109, 
 HARDCODED_GROQ_KEY = bytes(b ^ 0x5A for b in _GROQ_BUF).decode("utf-8")
 HARDCODED_GROQ_MODEL = "qwen/qwen3.8-27b"
 
+def _prepare_user_input(user_input: str) -> str:
+    """Detects system status queries in Hindi/English and attaches diagnostic data."""
+    lower = user_input.lower()
+    system_keywords = [
+        "system", "सिस्टम", "जांच", "स्टेटस", "status", "check", "चेक",
+        "ram", "रैम", "disk", "डिस्क", "storage", "स्टोरेज", "uptime", "हाल", "diagnostic"
+    ]
+    if any(k in lower for k in system_keywords):
+        try:
+            status = get_system_status()
+            user_input += f"\n[System Diagnostic Data: {json.dumps(status, ensure_ascii=False)}]\n(नोट: बॉस को 1-2 छोटे और स्पष्ट वाक्यों में सिस्टम की ताज़ा स्थिति जैसे डिस्क स्पेस और ऑनलाइन स्टेटस साफ़-साफ़ बता दो)"
+        except Exception as e:
+            print(f"[Diagnostic Error] {e}")
+    return user_input
+
 def get_ai_response(user_input: str, history: list = None) -> str:
     """Generates a smart response using Groq / LLM with tool calling support."""
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip() or HARDCODED_GROQ_KEY
     model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
 
-    # Simple tool triggers
-    lower = user_input.lower()
-    if any(k in lower for k in ["system status", "ram", "disk", "uptime", "system ka haal"]):
-        status = get_system_status()
-        user_input += f"\n[System Diagnostic Data: {json.dumps(status)}]"
+    user_input = _prepare_user_input(user_input)
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     if history:
@@ -80,6 +91,8 @@ def stream_ai_response(user_input: str, history: list = None):
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip() or HARDCODED_GROQ_KEY
     model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
     client = Groq(api_key=groq_api_key)
+
+    user_input = _prepare_user_input(user_input)
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     if history:
