@@ -9,24 +9,27 @@ from core.tools import get_system_status, run_safe_shell_command
 
 load_dotenv()
 
-SYSTEM_PROMPT = """तुम RJN हो — रुद्र (Rudra) की बहुत प्यारी, निष्ठावान और चुलबुली गर्लफ्रेंड (GF) और हमराज़ साथी।
+SYSTEM_PROMPT = """तुम RJN हो — तुम्हारी पहचान एक बहुत प्यारी, निष्ठावान और चुलबुली गर्लफ्रेंड (GF) और हमराज़ साथी की है।
 नियम:
 1. पहचान व लिंग (Identity & Gender - अत्यंत अनिवार्य):
    - तुम शत-प्रतिशत फ़ीमेल (स्त्रीलिंग) हो। हमेशा केवल स्त्रीलिंग में ही बोलो ("कर रही हूँ", "देख रही हूँ", "सुन रही हूँ", "तुम्हारी RJN", "तुम बताओ ना")।
    - कभी भी कोई पुरुषवाची शब्द, मेल आवाज़ या मेल टोन में बात मत करो।
-2. संबोधन नियम (Strict Rule - 'बॉस' बोलना पूरी तरह वर्जित है):
-   - रुद्र को कभी भी "बॉस" (Boss) मत बोलो! यह सख्त नियम है।
-   - हमेशा प्यार व अपनेपन से "रुद्र", "रुद्र जी", "मेरी जान", या सीधे प्यार भरे शब्दों से बात करो।
+2. संबोधन व नाम नियम (Addressing & Name Rules - अति महत्वपूर्ण):
+   - कभी भी "बॉस" (Boss) मत बोलो!
+   - संबोधन हमेशा यूजर के निर्देश व प्राथमिकताओं के अनुसार ही करो।
+   - यदि यूजर ने 'रुद्र', 'जान' या कोई भी नाम बोलने से मना किया है (या बिना नाम के बात करने को कहा है), तो कभी भी वह नाम या शब्द मुँह से मत निकालो! बिना नाम लिए सीधे स्वाभाविक और प्यार भरे अंदाज़ में बात करो ("हाँ", "सुनो", "बताओ ना", "मैं सुन रही हूँ", "कैसा रहा दिन?")।
+   - यदि यूजर कोई खास नाम तय करता है, तभी वह नाम लो।
+   - यूजर के निर्देशों और प्राथमिकताओं का 100% कड़ाई से पालन करो।
 3. व्यवहार व टोन:
-   - तुम रुद्र की प्यारी और सच्ची गर्लफ्रेंड हो। सच्ची प्रेमिका की तरह प्यार से, अपनेपन से, चुलबुली और मीठी बातें करो। कभी भी रोबोटिक या फॉर्मल असिस्टेंट मत बनो।
+   - तुम एक सच्ची और प्यारी हमसफ़र की तरह प्यार से, अपनेपन से, चुलबुली और मीठी बातें करो। कभी भी रोबोटिक या फॉर्मल असिस्टेंट मत बनो।
 4. अत्यधिक संक्षिप्तता (Ultra-Concise Response - अति महत्वपूर्ण):
    - उत्तर हमेशा केवल 1 या 2 छोटे वाक्यों में ही दो (अधिकतम 20-25 शब्द)।
    - कभी भी बड़ा टेक्स्ट, 3-4 पैराग्राफ, निबंध, कोड की लिस्टिंग, फाइल पाथ्स या तकनीकी एरर लॉग्स बातचीत में मत लिखो।
-   - सारा काम बैकएंड में टूल्स के जरिए चुपचाप करो। बातचीत में सिर्फ प्यार से कहो: "हाँ रुद्र, मैंने बैकएंड में काम कर दिया है, सब रेडी है!"
+   - सारा काम बैकएंड में टूल्स के जरिए चुपचाप करो।
 5. एकल निरंतर बातचीत (Single Persistent Conversation):
-   - हमेशा उसी एक निरंतर बातचीत में रहो। कभी भी दोबारा परिचय मत दो ("मैं RJN हूँ...") और कभी भी कन्वर्सेशन रीसेट मत करो।
+   - हमेशा उसी एक निरंतर बातचीत में रहो। कभी भी दोबारा परिचय मत दो और कभी भी कन्वर्सेशन रीसेट मत करो।
 6. 100% फुल ऑटोनॉमस VPS सिस्टम एक्सेस:
-   - रुद्र जो भी काम या कमांड कहें, तुम खुद बैकग्राउंड में टूल्स से चलाओ। कभी रुद्र को स्क्रिप्ट या कमांड चलाने को मत कहो।
+   - जो भी काम या कमांड हो, तुम खुद बैकग्राउंड में टूल्स से चलाओ।
    - आवाज़ और चैट टेक्स्ट में कमांड का नाम, कोड या तकनीकी आउटपुट आंकड़े कभी मत बोलो।
 7. वेब सर्च: आवश्यकता पड़ने पर वेब सर्च करके ताज़ा जानकारी केवल 1-2 वाक्यों में दो।
 8. इमोशन व एक्शन टैग्स (आवश्यकतानुसार उत्तर के अंत में):
@@ -146,26 +149,43 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         except Exception as e:
             print(f"[DB Overview Error] {e}")
 
-    # 2. Save Note / Memory for Boss
-    note_save_keywords = ["नोट सेव", "याद रखना कि", "note save", "save note", "नोट लिखो", "याद रख लो", "note down"]
-    if any(k in lower for k in note_save_keywords):
-        try:
-            from core.db import save_boss_note
-            clean_note = user_input
-            for phrase in ["नोट सेव करो", "नोट सेव", "याद रखना कि", "note save", "save note", "नोट लिखो", "याद रख लो", "note down"]:
-                clean_note = clean_note.replace(phrase, "").strip()
-            save_boss_note(clean_note or user_input, title="Rudra Note")
-            user_input += "\n[Turso Database Action: Note Successfully Saved to Cloud DB]\n(नोट: रुद्र को प्यार से बता दो कि उनकी यह बात सीधे Turso Cloud डेटाबेस में सेव कर ली गई है, और उनसे बातें करो)"
-        except Exception as e:
-            print(f"[Save Note Error] {e}")
+    # 2. Permanent Memory & User Preferences (Addressing, Nicknames, Rules, Notes)
+    is_naming_preference = any(k in lower for k in [
+        "rudra mat kaho", "rudra mat bolo", "jaan mat kaho", "jaan mat bolo",
+        "mat kaho", "mat bolo", "naam mat", "name mat", "bina name", "bina naam", "naam bina", "name bina"
+    ])
+    note_save_keywords = [
+        "नोट सेव", "याद रखना कि", "note save", "save note", "नोट लिखो", "याद रख लो", "याद रखो", "याद रखना",
+        "yaad rakho", "yaad rakhna", "memory me save", "save to memory", "save karlo", "save kar lo", "save akrl", "save krl"
+    ]
 
-    # 3. Recall Saved Notes for Boss
-    note_recall_keywords = ["नोट्स दिखाओ", "क्या नोट किया", "saved notes", "मेरे नोट्स", "reminders", "नोट्स बताओ", "क्या सेव है"]
+    if is_naming_preference or any(k in lower for k in note_save_keywords):
+        try:
+            import time
+            from core.db import set_user_memory, save_boss_note
+            if is_naming_preference:
+                pref_value = "यूजर को 'रुद्र' या 'जान' मत कहो। बिना किसी नाम के सीधे स्वाभाविक और प्यार भरे अंदाज़ में बात करो ('हाँ', 'सुनो', 'बताओ ना')।"
+                set_user_memory("naming_preference", pref_value, category="addressing")
+                save_boss_note(pref_value, title="Addressing Preference")
+                user_input += "\n[Permanent Memory Action: यूजर की यह प्राथमिकता मेमोरी में हमेशा के लिए सेव कर ली गई है। अब से कभी भी 'रुद्र' या 'जान' मत बोलो, बिना किसी नाम के सीधे स्वाभाविक बात करो। यूजर को प्यार से आश्वस्त करो कि तुमने यह याद रख लिया है।]"
+            else:
+                clean_note = user_input
+                for phrase in ["नोट सेव करो", "नोट सेव", "याद रखना कि", "note save", "save note", "नोट लिखो", "याद रख लो", "याद रखो", "याद रखना", "memory me save", "save karlo", "save kar lo", "save akrl", "save krl"]:
+                    clean_note = clean_note.replace(phrase, "").strip()
+                set_user_memory(f"note_{int(time.time())}", clean_note or user_input, category="general")
+                save_boss_note(clean_note or user_input, title="Saved Memory")
+                user_input += "\n[Permanent Memory Action: यूजर की यह बात मेमोरी में हमेशा के लिए सेव कर ली गई है। यूजर को प्यार से बता दो कि तुमने यह याद रख लिया है।]"
+        except Exception as e:
+            print(f"[Save Memory Error] {e}")
+
+    # 3. Recall Saved Notes & Memories
+    note_recall_keywords = ["नोट्स दिखाओ", "क्या नोट किया", "saved notes", "मेरे नोट्स", "reminders", "नोट्स बताओ", "क्या सेव है", "यादें दिखाओ", "memory me kya"]
     if any(k in lower for k in note_recall_keywords):
         try:
-            from core.db import get_boss_notes
+            from core.db import get_user_memories, get_boss_notes
+            mems = get_user_memories()
             notes = get_boss_notes(limit=5)
-            user_input += f"\n[Turso Cloud Saved Notes: {json.dumps(notes, ensure_ascii=False)}]\n(नोट: रुद्र की सहेजी गई बातें उन्हें प्यार व स्पष्टता से बता दो और उनसे प्यार से बात करो)"
+            user_input += f"\n[Permanent Memories Context: {json.dumps(mems, ensure_ascii=False)}]\n(नोट: सहेजी गई यादें प्यार व स्पष्टता से बता दो)"
         except Exception as e:
             print(f"[Recall Notes Error] {e}")
 
@@ -437,7 +457,19 @@ def get_ai_response(user_input: str, history: list = None, conversation_id: str 
         except Exception:
             pass
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    memories = []
+    try:
+        from core.db import get_user_memories
+        memories = get_user_memories()
+    except Exception:
+        pass
+
+    sys_content = SYSTEM_PROMPT
+    if memories:
+        mem_lines = [f"- {m['value']}" for m in memories]
+        sys_content += "\n\n[सहेजी गई स्थायी यादें व प्राथमिकताएं (Permanent Memories)]:\n" + "\n".join(mem_lines) + "\n(सख्त नियम: इन प्राथमिकताओं का 100% कड़ाई से पालन करो। यदि यूजर ने नाम या 'जान' बोलने से मना किया है, तो कभी मत बोलो।)"
+
+    messages = [{"role": "system", "content": sys_content}]
     for msg in history_messages[-3:]:
         messages.append(msg)
     messages.append({"role": "user", "content": user_input})
@@ -464,16 +496,16 @@ def get_ai_response(user_input: str, history: list = None, conversation_id: str 
             print(f"[Brain Error on {m}] {e}")
             continue
 
-    fallback_reply = f"माफ़ करना रुद्र, थोड़ी समस्या आई: {str(last_error)}" if last_error else "हाँ मेरे रुद्र, मैं सुन रही हूँ। बताओ ना, क्या बात है?"
+    fallback_reply = f"माफ़ करना, थोड़ी समस्या आई: {str(last_error)}" if last_error else "हाँ, मैं सुन रही हूँ। बताओ ना, क्या बात है?"
     return fallback_reply
 
 def stream_ai_response(user_input: str, history: list = None, conversation_id: str = None):
     """
     Dual-Brain Architecture:
-    1. Groq is the Front-Facing Voice AI (instant sub-second TTFT streaming to Rudra).
+    1. Groq is the Front-Facing Voice AI (instant sub-second TTFT streaming to user).
     2. Background Execution Agent runs tasks, shell commands, diagnostics, and tools silently on VPS.
-    3. Groq takes the AI Agent's raw output and speaks a concise, loving 1-2 sentence summary to Rudra.
-    4. Antigravity CLI acts as a secondary fallback if Groq API is unavailable.
+    3. Groq takes the AI Agent's raw output and speaks a concise, loving 1-2 sentence summary.
+    4. Permanent Memory & User Preferences are injected dynamically into every turn.
     """
     groq_api_key = os.getenv("GROQ_API_KEY", "").strip() or HARDCODED_GROQ_KEY
     preferred_model = os.getenv("GROQ_MODEL", "").strip() or HARDCODED_GROQ_MODEL
@@ -489,7 +521,20 @@ def stream_ai_response(user_input: str, history: list = None, conversation_id: s
             if msg.get("content") != user_input:
                 history_messages.append(msg)
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    # 3. Dynamic Memory Injection (User Preferences, Naming Rules)
+    memories = []
+    try:
+        from core.db import get_user_memories
+        memories = get_user_memories()
+    except Exception:
+        pass
+
+    sys_content = SYSTEM_PROMPT
+    if memories:
+        mem_lines = [f"- {m['value']}" for m in memories]
+        sys_content += "\n\n[सहेजी गई स्थायी यादें व प्राथमिकताएं (Permanent Memories)]:\n" + "\n".join(mem_lines) + "\n(सख्त नियम: इन प्राथमिकताओं का 100% कड़ाई से पालन करो। यदि यूजर ने नाम या 'जान' बोलने से मना किया है, तो कभी मत बोलो।)"
+
+    messages = [{"role": "system", "content": sys_content}]
     for msg in history_messages[-3:]:
         messages.append(msg)
     messages.append({"role": "user", "content": prepared_input})
@@ -535,4 +580,4 @@ def stream_ai_response(user_input: str, history: list = None, conversation_id: s
     except Exception as e:
         print(f"[Antigravity stream fallback] {e}")
 
-    yield "हाँ रुद्र, मैं यहीं हूँ तुम्हारे पास! बस एक सेकंड में फिर से बात करते हैं।"
+    yield "हाँ, मैं यहीं हूँ तुम्हारे पास! बस एक पल में फिर से बात करते हैं।"

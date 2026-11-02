@@ -141,6 +141,15 @@ def init_db():
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """)
+    execute_sql("""
+    CREATE TABLE IF NOT EXISTS user_memory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT UNIQUE,
+        value TEXT NOT NULL,
+        category TEXT DEFAULT 'preference',
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
 
 def get_db_overview() -> dict:
     """
@@ -195,6 +204,25 @@ def get_boss_notes(limit: int = 5) -> list:
 def delete_boss_note(note_id: int) -> dict:
     """Deletes a note by ID."""
     return execute_sql("DELETE FROM boss_notes WHERE id = ?;", [note_id])
+
+def set_user_memory(key: str, value: str, category: str = "preference") -> dict:
+    """Stores or updates a persistent user preference or permanent memory."""
+    return execute_sql(
+        "INSERT OR REPLACE INTO user_memory (key, value, category, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP);",
+        [key, value, category]
+    )
+
+def get_user_memories() -> list:
+    """Retrieves all active persistent user preferences and memories."""
+    try:
+        res = execute_sql("SELECT key, value, category, updated_at FROM user_memory ORDER BY id ASC;")
+        return res.get("rows", [])
+    except Exception:
+        return []
+
+def delete_user_memory(key: str) -> dict:
+    """Deletes a user memory by key."""
+    return execute_sql("DELETE FROM user_memory WHERE key = ?;", [key])
 
 def save_message(role: str, message: str):
     """Saves a conversation turn to Turso / SQLite database."""
