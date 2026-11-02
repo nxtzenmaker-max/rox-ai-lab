@@ -678,6 +678,7 @@ body {
   let audioCtx = null;
   let raf = null;
   let currentAudio = null;
+  const API_BASE = (window.location.port === '8088' || (!window.location.pathname.startsWith('/humanoid') && !window.location.origin.includes('8000'))) ? 'https://sampling-camping-appreciated-holding.trycloudflare.com' : '';
 
   // --- Smooth Natural Blinking System ---
   function blink() {
@@ -904,7 +905,7 @@ body {
 
     try {
       // 1. Fetch AI response from RJN server
-      const chatResp = await fetch('/api/chat', {
+      const chatResp = await fetch(API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })
@@ -917,7 +918,7 @@ body {
 
       // 2. Play High-Fidelity Voice via /api/tts
       try {
-        const ttsResp = await fetch('/api/tts', {
+        const ttsResp = await fetch(API_BASE + '/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: reply })
