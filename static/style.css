@@ -145,6 +145,7 @@ body {
     align-self: flex-end;
 }
 
+.chat-bubble.rjn,
 .chat-bubble.rox {
     background: rgba(255, 0, 127, 0.12);
     border-left: 3px solid var(--accent);

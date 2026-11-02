@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>ROX Orb - AI Voice Assistant</title>
+<title>RJN — AI Voice Companion</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -20,8 +20,9 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    background: #05040d radial-gradient(circle at 50% 38%, #160d33 0%, #05040d 75%);
+    background: #06070b radial-gradient(circle at 50% 36%, #150e26 0%, #06070b 80%);
     color: #f8fafc;
+    letter-spacing: -0.01em;
   }
   html.t, html.t body { background: transparent !important; }
   
@@ -39,17 +40,17 @@
   #glow {
     position: fixed;
     left: 50%;
-    top: 33%;
+    top: 36%;
     width: 80vmin;
     height: 80vmin;
     margin: -40vmin 0 0 -40vmin;
     border-radius: 50%;
     pointer-events: none;
-    opacity: 0.35;
-    filter: blur(40px);
-    background: radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(0, 242, 254, 0.15) 45%, rgba(0, 0, 0, 0) 70%);
+    opacity: 0.38;
+    filter: blur(52px);
+    background: radial-gradient(circle, rgba(244, 114, 182, 0.28) 0%, rgba(168, 85, 247, 0.16) 45%, rgba(0, 0, 0, 0) 70%);
     z-index: 0;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.5s ease, background 0.8s ease;
   }
 
   /* UI Layer (HUD) */
@@ -61,7 +62,7 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 20px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px;
+    padding: 16px 20px calc(20px + env(safe-area-inset-bottom, 0px)) 20px;
   }
   
   /* Top Bar */
@@ -70,103 +71,128 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    max-width: 620px;
+    max-width: 560px;
     margin: 0 auto;
     pointer-events: auto;
   }
-  .logo-badge {
+  .brand-capsule {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 8px 16px;
+    background: rgba(18, 19, 28, 0.65);
+    padding: 7px 16px;
     border-radius: 9999px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
   }
-  .status-dot {
+  .status-jewel {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #00f2fe;
-    box-shadow: 0 0 10px #00f2fe;
-    animation: pulse-dot 2s infinite;
+    background: #10b981;
+    box-shadow: 0 0 10px #10b981;
+    animation: pulse-jewel 2.5s infinite ease-in-out;
   }
-  @keyframes pulse-dot { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:0.4; transform:scale(0.8);} }
-  .logo-text {
-    font-size: 13px;
+  @keyframes pulse-jewel { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:0.4; transform:scale(0.85);} }
+  .brand-title {
+    font-size: 14px;
     font-weight: 800;
-    letter-spacing: 1.5px;
-    background: linear-gradient(135deg, #00f2fe 0%, #c084fc 100%);
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #ffffff 0%, #f472b6 60%, #c084fc 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+  }
+  .brand-tag {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 2px 7px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   
   /* Status Pill */
   .status-pill {
     font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 1px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
     text-transform: uppercase;
-    padding: 3px 10px;
+    padding: 5px 12px;
     border-radius: 9999px;
-    background: rgba(0, 242, 254, 0.12);
-    color: #38bdf8;
-    border: 1px solid rgba(0, 242, 254, 0.28);
+    background: rgba(16, 185, 129, 0.1);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.25);
     white-space: nowrap;
-    transition: all 0.25s ease;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
   .status-pill.speaking {
-    background: rgba(236, 72, 153, 0.16);
-    color: #f472b6;
-    border-color: rgba(236, 72, 153, 0.4);
-    box-shadow: 0 0 12px rgba(236, 72, 153, 0.3);
+    background: rgba(244, 63, 94, 0.16);
+    color: #fb7185;
+    border-color: rgba(244, 63, 94, 0.4);
+    box-shadow: 0 0 16px rgba(244, 63, 94, 0.25);
   }
   .status-pill.thinking {
-    background: rgba(234, 179, 8, 0.16);
-    color: #facc15;
-    border-color: rgba(234, 179, 8, 0.4);
-    box-shadow: 0 0 12px rgba(234, 179, 8, 0.3);
+    background: rgba(245, 158, 11, 0.16);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.2);
   }
   .status-pill.listening {
-    background: rgba(0, 242, 254, 0.2);
-    color: #00f2fe;
-    border-color: rgba(0, 242, 254, 0.5);
-    box-shadow: 0 0 14px rgba(0, 242, 254, 0.35);
+    background: rgba(56, 189, 248, 0.18);
+    color: #38bdf8;
+    border-color: rgba(56, 189, 248, 0.45);
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
   }
-
-  .tech-badge {
-    font-size: 11px;
-    font-weight: 600;
+  
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(18, 19, 28, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     color: #94a3b8;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 8px 14px;
-    border-radius: 9999px;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    letter-spacing: 0.5px;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .icon-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(1.05);
   }
 
-  /* Compact Compressed Subtitle Strip down near the bottom */
+  /* Subtitles Card (Floating Fluid Speech Canvas) */
   .subtitles-box {
-    max-width: 480px;
-    width: calc(100% - 24px);
-    margin: 0 auto 10px auto;
-    padding: 8px 14px;
-    background: rgba(10, 14, 26, 0.78);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 18px;
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 242, 254, 0.05);
+    max-width: 540px;
+    width: 100%;
+    margin: 0 auto 12px auto;
+    padding: 12px 18px;
+    background: rgba(14, 15, 24, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 20px;
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), 0 0 20px rgba(244, 114, 182, 0.04);
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    max-height: 72px;
+    gap: 6px;
+    max-height: 125px;
     overflow-y: auto;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     pointer-events: auto;
@@ -190,126 +216,134 @@
   .speaker-pill {
     font-size: 10px;
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: 1.2px;
     text-transform: uppercase;
-    padding: 2px 7px;
+    padding: 3px 8px;
     border-radius: 8px;
   }
-  .speaker-pill.speaker-rox {
-    background: linear-gradient(135deg, rgba(0, 242, 254, 0.25), rgba(168, 85, 247, 0.25));
-    color: #38bdf8;
-    border: 1px solid rgba(0, 242, 254, 0.45);
-    box-shadow: 0 0 10px rgba(0, 242, 254, 0.25);
+  .speaker-pill.speaker-rjn {
+    background: linear-gradient(135deg, rgba(244, 114, 182, 0.25), rgba(192, 132, 252, 0.25));
+    color: #f472b6;
+    border: 1px solid rgba(244, 114, 182, 0.4);
+    box-shadow: 0 0 10px rgba(244, 114, 182, 0.15);
   }
-  .speaker-pill.speaker-boss, .speaker-pill.speaker-rudra {
-    background: rgba(255, 255, 255, 0.1);
+  .speaker-pill.speaker-user {
+    background: rgba(255, 255, 255, 0.08);
     color: #e2e8f0;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.15);
   }
   .sub-emo {
     font-size: 11px;
     font-weight: 700;
     color: #cbd5e1;
-    background: rgba(255, 255, 255, 0.08);
-    padding: 2px 7px;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 2px 8px;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
   .sub-body {
-    font-size: 13.5px;
+    font-size: 14.5px;
     font-weight: 500;
-    line-height: 1.45;
-    color: #f1f5f9;
+    line-height: 1.5;
+    color: #f8fafc;
     letter-spacing: 0.2px;
     word-break: break-word;
   }
 
-  /* Controls (Bottom Bar) */
+  /* Bottom Controls (Unified Frictionless Dock) */
   .bottom-controls {
     display: flex;
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 500px;
+    max-width: 540px;
     margin: 0 auto;
     pointer-events: auto;
   }
   
-  .mic-button-wrap {
-    position: relative;
-    margin-bottom: 12px;
+  .unified-dock {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 54px;
+    background: rgba(18, 19, 30, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    padding: 4px 6px 4px 20px;
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    transition: border-color 0.25s, box-shadow 0.25s;
+    gap: 8px;
   }
+  .unified-dock:focus-within {
+    border-color: rgba(244, 114, 182, 0.45);
+    box-shadow: 0 8px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(244, 114, 182, 0.15);
+  }
+  .dock-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #f8fafc;
+    font-size: 14.5px;
+    font-weight: 500;
+  }
+  .dock-input::placeholder {
+    color: rgba(255, 255, 255, 0.38);
+    font-weight: 400;
+  }
+  .dock-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   .mic-button {
-    width: 66px;
-    height: 66px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     border: none;
-    background: linear-gradient(135deg, #00f2fe 0%, #9333ea 100%);
+    background: linear-gradient(135deg, #f43f5e 0%, #a855f7 100%);
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 6px 24px rgba(0, 242, 254, 0.35), 0 0 18px rgba(147, 51, 234, 0.3);
+    box-shadow: 0 4px 18px rgba(244, 63, 94, 0.35);
     transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
   }
   .mic-button:hover {
     transform: scale(1.05);
-    box-shadow: 0 8px 30px rgba(0, 242, 254, 0.5), 0 0 25px rgba(236, 72, 153, 0.5);
+    box-shadow: 0 6px 24px rgba(244, 63, 94, 0.5);
   }
   .mic-button:active {
     transform: scale(0.96);
   }
   .mic-button.active {
-    background: linear-gradient(135deg, #00f2fe, #ec4899);
-    box-shadow: 0 0 35px rgba(0, 242, 254, 0.8), 0 0 50px rgba(236, 72, 153, 0.5);
-    animation: pulse-mic 1.6s infinite;
+    background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
+    animation: pulse-mic 1.6s infinite ease-in-out;
   }
-  @keyframes pulse-mic { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
-
-  .input-bar {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    height: 48px;
-    background: rgba(15, 23, 42, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.11);
-    border-radius: 9999px;
-    padding: 0 5px 0 18px;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
-    transition: border-color 0.2s, box-shadow 0.2s;
+  @keyframes pulse-mic {
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.08); box-shadow: 0 0 35px rgba(236, 72, 153, 0.8);}
   }
-  .input-bar:focus-within {
-    border-color: rgba(0, 242, 254, 0.5);
-    box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
-  }
-  .input-bar input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 500;
-  }
-  .input-bar input::placeholder {
-    color: rgba(255, 255, 255, 0.42);
-    font-weight: 400;
-  }
+  
   .send-btn {
-    background: linear-gradient(135deg, #00f2fe, #9333ea);
-    border: none;
-    color: #fff;
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #f43f5e 0%, #a855f7 100%);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.2s;
+    box-shadow: 0 4px 18px rgba(244, 63, 94, 0.35);
+    transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
   .send-btn:hover {
     transform: scale(1.05);
@@ -325,18 +359,18 @@
   /* Photo Snapshot Modal */
   .photo-modal {
     position: fixed; inset: 0; z-index: 1000;
-    background: rgba(4, 6, 14, 0.82);
-    backdrop-filter: blur(14px);
+    background: rgba(4, 6, 12, 0.85);
+    backdrop-filter: blur(16px);
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
   }
   .photo-card {
-    background: rgba(15, 23, 42, 0.96);
-    border: 1.5px solid #00f2fe;
-    box-shadow: 0 0 40px rgba(0, 242, 254, 0.4);
+    background: rgba(18, 19, 28, 0.95);
+    border: 1px solid rgba(244, 114, 182, 0.35);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(244, 114, 182, 0.15);
     border-radius: 22px;
     padding: 20px;
-    max-width: 440px;
+    max-width: 420px;
     width: 100%;
     display: flex; flex-direction: column; gap: 14px;
     animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -346,7 +380,7 @@
     display: flex; justify-content: space-between; align-items: center;
   }
   .photo-title {
-    color: #00f2fe; font-size: 14px; font-weight: 700; letter-spacing: 1px;
+    color: #f472b6; font-size: 14px; font-weight: 700; letter-spacing: 0.5px;
     display: flex; align-items: center; gap: 6px;
   }
   .photo-close-btn {
@@ -354,22 +388,22 @@
   }
   .photo-close-btn:hover { color: #fff; }
   .photo-img {
-    width: 100%; border-radius: 14px; border: 1px solid rgba(0, 242, 254, 0.3);
-    object-fit: cover; max-height: 340px;
+    width: 100%; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1);
+    object-fit: cover; max-height: 320px;
   }
   .photo-actions {
     display: flex; gap: 10px; justify-content: flex-end;
   }
   .photo-btn {
-    background: linear-gradient(135deg, #00f2fe, #4facfe);
-    color: #080c16; font-size: 13px; font-weight: 700;
-    padding: 8px 18px; border-radius: 10px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #f43f5e, #c084fc);
+    color: #fff; font-size: 13px; font-weight: 600;
+    padding: 9px 18px; border-radius: 12px; border: none; cursor: pointer;
     text-decoration: none; display: inline-flex; align-items: center;
     transition: 0.2s;
   }
-  .photo-btn:hover { transform: scale(1.04); }
+  .photo-btn:hover { transform: scale(1.03); }
   .photo-btn.secondary {
-    background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
 </style>
@@ -384,13 +418,13 @@
 <div id="photoModal" class="photo-modal" style="display:none;">
   <div class="photo-card">
     <div class="photo-header">
-      <span class="photo-title">📷 PHOTO CAPTURED, RUDRA!</span>
+      <span class="photo-title">📷 Photo Snapshot</span>
       <button class="photo-close-btn" onclick="closePhotoModal()">✕</button>
     </div>
     <img id="photoPreview" class="photo-img" src="" alt="Captured Photo" />
     <div class="photo-actions">
-      <a id="photoDownloadBtn" class="photo-btn" download="rudra-captured.jpg">💾 DOWNLOAD</a>
-      <button class="photo-btn secondary" onclick="closePhotoModal()">DONE</button>
+      <a id="photoDownloadBtn" class="photo-btn" download="rjn-snapshot.jpg">💾 Download</a>
+      <button class="photo-btn secondary" onclick="closePhotoModal()">Done</button>
     </div>
   </div>
 </div>
@@ -401,39 +435,46 @@
 <div class="hud-layer">
   <!-- Top Bar -->
   <div class="top-bar">
-    <div class="logo-badge">
-      <div class="status-dot"></div>
-      <span class="logo-text">ROX AI</span>
-      <span id="statusLabel" class="status-pill online">ONLINE</span>
+    <div class="brand-capsule">
+      <div class="status-jewel"></div>
+      <span class="brand-title">RJN</span>
+      <span class="brand-tag">AI COMPANION</span>
     </div>
-    <div class="tech-badge">⚡ 48-CORE VPS</div>
+    <div class="top-actions">
+      <span id="statusLabel" class="status-pill online">ONLINE</span>
+      <button id="quickCameraBtn" class="icon-btn" title="Take Selfie / Photo" onclick="capturePhotoAction('front')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+      </button>
+    </div>
   </div>
 
-  <!-- Bottom Controls & Subtitles -->
+  <!-- Bottom Controls & Subtitles (Frictionless Unified Dock) -->
   <div class="bottom-controls">
     <div id="subtitlesBox" class="subtitles-box" style="display:none;">
       <div id="subtitlesText"></div>
     </div>
 
-    <div class="mic-button-wrap">
-      <button id="micBtn" class="mic-button" title="Tap to Talk">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-          <line x1="12" y1="19" x2="12" y2="23"></line>
-          <line x1="8" y1="23" x2="16" y2="23"></line>
-        </svg>
-      </button>
-    </div>
-
-    <form id="textForm" class="input-bar" onsubmit="event.preventDefault(); submitText();">
-      <input id="textInput" type="text" placeholder="Type a message or command..." autocomplete="off">
-      <button type="submit" class="send-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"></line>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-        </svg>
-      </button>
+    <form id="textForm" class="unified-dock" onsubmit="event.preventDefault(); submitText();">
+      <input id="textInput" class="dock-input" type="text" placeholder="Talk with RJN or type anything..." autocomplete="off">
+      <div class="dock-actions">
+        <button type="button" id="micBtn" class="mic-button" title="Tap to Talk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+        <button type="submit" id="sendBtn" class="send-btn" title="Send" style="display:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
     </form>
   </div>
 </div>
@@ -825,13 +866,27 @@
   var statusLabel = document.getElementById('statusLabel');
   var subtitlesText = document.getElementById('subtitlesText');
   var micBtn = document.getElementById('micBtn');
+  var sendBtn = document.getElementById('sendBtn');
   var textInput = document.getElementById('textInput');
   var chatHistory = [];
   var activeConversationId = null;
-  try { activeConversationId = localStorage.getItem('rox_conv_id') || null; } catch(e){}
+  try { activeConversationId = localStorage.getItem('rjn_conv_id') || null; } catch(e){}
   var isListening = false;
   var isSpeaking = false;
   var recognition = null;
+
+  // Seamless Send vs Mic toggle on typing
+  if (textInput) {
+    textInput.addEventListener('input', function() {
+      if (this.value.trim().length > 0) {
+        if (sendBtn) sendBtn.style.display = 'flex';
+        if (micBtn) micBtn.style.display = 'none';
+      } else {
+        if (sendBtn) sendBtn.style.display = 'none';
+        if (micBtn) micBtn.style.display = 'flex';
+      }
+    });
+  }
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -868,17 +923,17 @@
       return;
     }
     if(subtitlesBox) subtitlesBox.style.display = 'flex';
-    var isRox = speaker === 'ROX';
+    var isRjn = speaker === 'ROX' || speaker === 'RJN';
     var emoBadge = '';
-    if (isRox && emotion && emotion !== 'neutral') {
+    if (isRjn && emotion && emotion !== 'neutral') {
       if (emotion === 'laugh') emoBadge = '<span class="sub-emo">😄 हँसी</span>';
       else if (emotion === 'cry') emoBadge = '<span class="sub-emo">😢 भावुक</span>';
       else if (emotion === 'sing') emoBadge = '<span class="sub-emo">🎵 गीत</span>';
       else if (emotion === 'love') emoBadge = '<span class="sub-emo">💖 प्रेम</span>';
       else if (emotion === 'excited') emoBadge = '<span class="sub-emo">✨ उत्साह</span>';
     }
-    var speakerClass = isRox ? 'speaker-rox' : 'speaker-rudra';
-    var speakerLabel = isRox ? 'RJN' : 'RUDRA';
+    var speakerClass = isRjn ? 'speaker-rjn' : 'speaker-user';
+    var speakerLabel = isRjn ? 'RJN' : 'YOU';
 
     subtitlesText.innerHTML = `
       <div class="sub-header">
@@ -1013,14 +1068,14 @@
         var dlBtn = document.getElementById('photoDownloadBtn');
         var titleEl = document.querySelector('.photo-title');
         if (titleEl) {
-          titleEl.innerText = "📷 " + (isBack ? "BACK CAMERA" : "FRONT CAMERA") + " PHOTO, BOSS!";
+          titleEl.innerText = "📷 " + (isBack ? "BACK CAMERA" : "FRONT CAMERA") + " PHOTO";
         }
         if (preview && modal) {
           preview.src = dataUrl;
           if (dlBtn) dlBtn.href = dataUrl;
           modal.style.display = 'flex';
         }
-        setStatus("PHOTO CAPTURED, RUDRA!", "speaking");
+        setStatus("PHOTO CAPTURED!", "speaking");
 
         // Immediately release camera stream so phone's green privacy indicator turns off
         if (cameraStream) {
@@ -1352,7 +1407,7 @@
     resetAudioEngine();
 
     setStatus("THINKING...", "thinking");
-    setSubtitle("RUDRA", userMsg);
+    setSubtitle("YOU", userMsg);
 
     chatHistory.push({ role: "user", content: userMsg });
 
@@ -1361,7 +1416,7 @@
     var turnId = currentTurnId;
     var actionTriggered = false;
 
-    // Detect Rudra's explicit camera intent from what was spoken or typed
+    // Detect explicit camera intent from what was spoken or typed
     var isBackIntent = /(back|rear|peeche|piche|peche|पीछे|बैक|रियर)/i.test(userMsg);
     var isFrontIntent = /(front|selfie|aage|अगला|सामने|फ्रंट|आगे|सेल्फी)/i.test(userMsg);
 
@@ -1432,7 +1487,7 @@
               var parsed = JSON.parse(dataStr);
               if (parsed.conversation_id) {
                 activeConversationId = parsed.conversation_id;
-                try { localStorage.setItem('rox_conv_id', activeConversationId); } catch(e){}
+                try { localStorage.setItem('rjn_conv_id', activeConversationId); } catch(e){}
               }
 
               var token = parsed.token || "";
@@ -1458,7 +1513,7 @@
                 .trim();
               setSubtitle("RJN", cleanSubtitle, emo);
 
-              // Trigger photo capture command (front vs back) if requested by Rudra
+              // Trigger photo capture command (front vs back) if requested
               var facingMatch = fullReply.match(/\[ACTION:\s*CAPTURE_PHOTO(?::(front|back))?\s*\]/i);
               if (!actionTriggered && facingMatch) {
                 actionTriggered = true;
@@ -1558,7 +1613,7 @@
         var fbData = await fbResp.json();
         if (fbData.conversation_id) {
           activeConversationId = fbData.conversation_id;
-          try { localStorage.setItem('rox_conv_id', activeConversationId); } catch(e){}
+          try { localStorage.setItem('rjn_conv_id', activeConversationId); } catch(e){}
         }
         var fbReply = (fbData.reply || "").trim();
         if (fbReply) {
@@ -1672,7 +1727,7 @@
         } else if (voiceDetected) {
           if (!silenceStartTime) {
             silenceStartTime = now;
-          } else if (now - silenceStartTime > 750) { // 750ms natural silence = Rudra finished speaking
+          } else if (now - silenceStartTime > 750) { // 750ms natural silence = finished speaking
             finishSpeechAndProcess();
           }
         } else {

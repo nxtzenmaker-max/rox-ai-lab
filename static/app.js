@@ -361,7 +361,7 @@ const micBtn = document.getElementById('mic-btn');
 
 function appendMessage(sender, text, isUser = false) {
     const bubble = document.createElement('div');
-    bubble.className = `chat-bubble ${isUser ? 'user' : 'rox'}`;
+    bubble.className = `chat-bubble ${isUser ? 'user' : 'rjn'}`;
     bubble.innerHTML = `<strong>${sender}:</strong> ${text}`;
     chatBox.appendChild(bubble);
     chatBox.scrollTop = chatBox.scrollHeight;
@@ -381,12 +381,12 @@ async function handleSendMessage(msg) {
             body: JSON.stringify({ message: text })
         });
         const data = await resp.json();
-        const reply = data.reply || "Kuch samajh nahi aaya bhai.";
+        const reply = data.reply || "Kuch samajh nahi aaya, ek baar phir se bolo na.";
 
-        appendMessage('ROX', reply, false);
+        appendMessage('RJN', reply, false);
         playRoxSpeech(reply);
     } catch (err) {
-        appendMessage('ROX', `Network error: ${err.message}`, false);
+        appendMessage('RJN', `Network error: ${err.message}`, false);
     }
 }
 

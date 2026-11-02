@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Calling ROX (RJN)...</title>
+    <title>RJN — AI Voice Call</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background: #080c16; color: #fff; height: 100vh; width: 100vw; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 50px 24px; overflow: hidden; }
+        body { background: #06070b; color: #fff; height: 100vh; width: 100vw; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 50px 24px; overflow: hidden; }
         
         .caller-info { display: flex; flex-direction: column; align-items: center; margin-top: 30px; }
         .avatar-wrap { position: relative; width: 130px; height: 130px; margin-bottom: 24px; }
-        .avatar { width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #00f2fe, #4facfe); display: flex; align-items: center; justify-content: center; font-size: 52px; font-weight: 800; color: #080c16; box-shadow: 0 0 35px rgba(0, 242, 254, 0.4); z-index: 2; position: relative; }
-        .pulse-ring { position: absolute; top: -15px; left: -15px; width: 160px; height: 160px; border-radius: 50%; border: 2px solid rgba(0, 242, 254, 0.4); animation: pulse 2s infinite; z-index: 1; }
-        .pulse-ring-2 { position: absolute; top: -30px; left: -30px; width: 190px; height: 190px; border-radius: 50%; border: 1.5px solid rgba(0, 242, 254, 0.2); animation: pulse 2s infinite 0.7s; z-index: 0; }
+        .avatar { width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #ec4899, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 52px; font-weight: 800; color: #fff; box-shadow: 0 0 35px rgba(236, 72, 153, 0.4); z-index: 2; position: relative; }
+        .pulse-ring { position: absolute; top: -15px; left: -15px; width: 160px; height: 160px; border-radius: 50%; border: 2px solid rgba(236, 72, 153, 0.4); animation: pulse 2s infinite; z-index: 1; }
+        .pulse-ring-2 { position: absolute; top: -30px; left: -30px; width: 190px; height: 190px; border-radius: 50%; border: 1.5px solid rgba(139, 92, 246, 0.3); animation: pulse 2s infinite 0.7s; z-index: 0; }
         
         @keyframes pulse {
             0% { transform: scale(0.85); opacity: 0.8; }
@@ -21,11 +21,11 @@
         }
 
         .caller-name { font-size: 28px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 6px; }
-        .call-status { font-size: 14px; color: #00f2fe; font-weight: 500; letter-spacing: 1px; }
+        .call-status { font-size: 14px; color: #f472b6; font-weight: 500; letter-spacing: 1px; }
 
-        .live-transcript { width: 100%; max-width: 360px; height: 160px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(0, 242, 254, 0.2); border-radius: 18px; padding: 16px; overflow-y: auto; font-size: 14.5px; line-height: 1.5; color: #cbd5e1; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 8px; }
+        .live-transcript { width: 100%; max-width: 360px; height: 160px; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(244, 114, 182, 0.2); border-radius: 18px; padding: 16px; overflow-y: auto; font-size: 14.5px; line-height: 1.5; color: #cbd5e1; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 8px; }
         .chat-msg { padding: 8px 12px; border-radius: 12px; font-size: 13.5px; }
-        .chat-msg.rox { background: rgba(0, 242, 254, 0.12); border-left: 3px solid #00f2fe; color: #fff; }
+        .chat-msg.rjn { background: rgba(244, 114, 182, 0.12); border-left: 3px solid #f472b6; color: #fff; }
         .chat-msg.you { background: rgba(255, 255, 255, 0.08); border-left: 3px solid #94a3b8; align-self: flex-end; }
 
         .call-controls { width: 100%; max-width: 340px; display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px; }
@@ -37,8 +37,8 @@
 
         .voice-active { animation: glow 1s infinite alternate; }
         @keyframes glow {
-            from { box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
-            to { box-shadow: 0 0 45px rgba(0, 242, 254, 0.9); }
+            from { box-shadow: 0 0 20px rgba(244, 114, 182, 0.4); }
+            to { box-shadow: 0 0 45px rgba(244, 114, 182, 0.9); }
         }
     </style>
 </head>
@@ -48,15 +48,15 @@
         <div class="avatar-wrap">
             <div class="pulse-ring"></div>
             <div class="pulse-ring-2"></div>
-            <div class="avatar" id="avatar-icon">R</div>
+            <div class="avatar" id="avatar-icon">RJN</div>
         </div>
-        <div class="caller-name">ROX (RJN)</div>
+        <div class="caller-name">RJN</div>
         <div class="call-status" id="call-status">TAP GREEN BUTTON TO CALL</div>
     </div>
 
     <!-- Live Transcript Box -->
     <div class="live-transcript" id="transcript-box">
-        <div class="chat-msg rox"><strong>ROX:</strong> Ready to talk. Call lagao bhai!</div>
+        <div class="chat-msg rjn"><strong>RJN:</strong> Call lagao na, main sun rahi hoon!</div>
     </div>
 
     <!-- Controls -->
@@ -86,14 +86,14 @@
 
         function appendMsg(sender, text, isYou) {
             const div = document.createElement('div');
-            div.className = `chat-msg ${isYou ? 'you' : 'rox'}`;
+            div.className = `chat-msg ${isYou ? 'you' : 'rjn'}`;
             div.innerHTML = `<strong>${sender}:</strong> ${text}`;
             transcriptBox.appendChild(div);
             transcriptBox.scrollTop = transcriptBox.scrollHeight;
         }
 
         async function speak(text) {
-            statusEl.innerText = "ROX BOL RAHA HAI...";
+            statusEl.innerText = "RJN BOL RAHI HAI...";
             avatarEl.classList.add('voice-active');
             try {
                 const resp = await fetch('/api/tts', {
@@ -124,7 +124,7 @@
 
         async function processUserSpeech(text) {
             appendMsg("YOU", text, true);
-            statusEl.innerText = "ROX SOCH RAHA HAI...";
+            statusEl.innerText = "RJN SOCH RAHI HAI...";
 
             try {
                 const resp = await fetch('/api/chat', {
@@ -133,11 +133,11 @@
                     body: JSON.stringify({ message: text })
                 });
                 const data = await resp.json();
-                const reply = data.reply || "Kuch samajh nahi aaya bhai.";
-                appendMsg("ROX", reply, false);
+                const reply = data.reply || "Kuch samajh nahi aaya, phir se batao na.";
+                appendMsg("RJN", reply, false);
                 await speak(reply);
             } catch (err) {
-                appendMsg("ROX", "Network issue bhai!", false);
+                appendMsg("RJN", "Network issue aa raha hai, ek second rukna na!", false);
             }
         }
 
@@ -185,8 +185,8 @@
             }
 
             // Greet User
-            const greeting = "Namaste! Main aapki AI assistant RJN bol rahi hoon. Boliye, aaj main aapki kya madad karoon?";
-            appendMsg("ROX", greeting, false);
+            const greeting = "Namaste! Main aapki RJN bol rahi hoon. Boliye, aaj main aapki kya madad karoon?";
+            appendMsg("RJN", greeting, false);
             speak(greeting);
         }
 

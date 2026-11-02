@@ -18,7 +18,7 @@ from core.voice import generate_speech, transcribe_audio_deepgram
 from core.db import save_message, log_photo, is_turso_configured
 from core.tools import is_running_on_vps
 
-app = FastAPI(title="ROX AI Lab - 3D Humanoid & Phone Agent")
+app = FastAPI(title="RJN AI Lab - 3D Humanoid & Phone Agent")
 
 # Enable CORS for direct high-speed client-to-VPS voice processing
 app.add_middleware(
@@ -113,7 +113,7 @@ async def serve_call_screen():
 async def health_check():
     return {
         "status": "online",
-        "agent": "ROX (RJN)",
+        "agent": "RJN",
         "features": ["3D Avatar", "Deepgram Aura Voice", "Twilio Phone Agent", "Groq Brain"]
     }
 
@@ -287,7 +287,7 @@ async def twilio_incoming_call(request: Request):
     Greets caller with Deepgram voice and listens for their command!
     """
     host = request.headers.get("host", "localhost:8000")
-    greeting = "Haan bhai! Main Rox bol raha hoon. Batao kya hukam hai?"
+    greeting = "Haan! Main RJN bol rahi hoon. Batao, kya madad karoon?"
     encoded_greeting = urllib.parse.quote(greeting)
 
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -295,14 +295,14 @@ async def twilio_incoming_call(request: Request):
     <Play>https://{host}/twilio/audio?text={encoded_greeting}</Play>
     <Gather input="speech" action="/twilio/respond" language="hi-IN" speechTimeout="auto" timeout="5">
     </Gather>
-    <Say voice="Polly.Aditi">Bhai kuch sunai nahi diya. Phir se call karo!</Say>
+    <Say voice="Polly.Aditi">Kuch sunai nahi diya. Phir se call karo na!</Say>
 </Response>"""
     return Response(content=twiml, media_type="application/xml")
 
 @app.post("/twilio/respond")
 async def twilio_respond_call(request: Request):
     """
-    Processes caller's speech using Rox Brain and speaks back!
+    Processes caller's speech using RJN Brain and speaks back!
     """
     host = request.headers.get("host", "localhost:8000")
     form_data = await request.form()
@@ -310,12 +310,12 @@ async def twilio_respond_call(request: Request):
     print(f"[Twilio Phone Call] User said: {caller_speech}")
 
     if not caller_speech:
-        reply = "Bhai awaaz nahi aayi, phir se bolo."
+        reply = "Awaaz nahi aayi, phir se bolo na."
     else:
-        # Get AI Response from Rox Brain
+        # Get AI Response from RJN Brain
         reply = get_ai_response(caller_speech)
 
-    print(f"[Twilio Phone Call] Rox reply: {reply}")
+    print(f"[Twilio Phone Call] RJN reply: {reply}")
     encoded_reply = urllib.parse.quote(reply)
 
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -323,7 +323,7 @@ async def twilio_respond_call(request: Request):
     <Play>https://{host}/twilio/audio?text={encoded_reply}</Play>
     <Gather input="speech" action="/twilio/respond" language="hi-IN" speechTimeout="auto" timeout="5">
     </Gather>
-    <Say voice="Polly.Aditi">Theek hai bhai, call disconnect kar raha hoon. Alvida!</Say>
+    <Say voice="Polly.Aditi">Theek hai, call disconnect kar rahi hoon. Bye!</Say>
 </Response>"""
     return Response(content=twiml, media_type="application/xml")
 
@@ -347,8 +347,8 @@ async def twilio_websocket_stream(websocket: WebSocket):
                 stream_sid = data["start"]["streamSid"]
                 print(f"[Twilio] Stream started: {stream_sid}")
                 
-                # Rox greets the caller automatically on pickup!
-                greeting_text = "Haan bhai! Main Rox bol raha hoon. Batao kya command hai?"
+                # RJN greets the caller automatically on pickup!
+                greeting_text = "Haan! Main RJN bol rahi hoon. Batao, kya command hai?"
                 try:
                     # Generate audio directly in mulaw 8000Hz for phone call
                     mulaw_audio = await generate_speech(greeting_text, audio_format="mulaw")
