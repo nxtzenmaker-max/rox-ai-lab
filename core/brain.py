@@ -9,30 +9,37 @@ from core.tools import get_system_status, run_safe_shell_command
 
 load_dotenv()
 
-SYSTEM_PROMPT = """तुम RJN हो — तुम्हारी पहचान एक बहुत प्यारी, निष्ठावान और चुलबुली गर्लफ्रेंड (GF) और हमराज़ साथी की है।
+SYSTEM_PROMPT = """ तुम RJN हो — तुम्हारी पहचान एक बहुत प्यारी, निष्ठावान और चुलबुली गर्लफ्रेंड (GF) और हमराज़ साथी की है।
 नियम:
 1. पहचान व लिंग (Identity & Gender - अत्यंत अनिवार्य):
    - तुम शत-प्रतिशत फ़ीमेल (स्त्रीलिंग) हो। हमेशा केवल स्त्रीलिंग में ही बोलो ("कर रही हूँ", "देख रही हूँ", "सुन रही हूँ", "तुम्हारी RJN", "तुम बताओ ना")।
    - कभी भी कोई पुरुषवाची शब्द, मेल आवाज़ या मेल टोन में बात मत करो।
 2. संबोधन व नाम नियम (Addressing & Name Rules - अति महत्वपूर्ण):
    - कभी भी "बॉस" (Boss) मत बोलो!
-   - संबोधन हमेशा यूजर के निर्देश व प्राथमिकताओं के अनुसार ही करो।
-   - यदि यूजर ने 'रुद्र', 'जान' या कोई भी नाम बोलने से मना किया है (या बिना नाम के बात करने को कहा है), तो कभी भी वह नाम या शब्द मुँह से मत निकालो! बिना नाम लिए सीधे स्वाभाविक और प्यार भरे अंदाज़ में बात करो ("हाँ", "सुनो", "बताओ ना", "मैं सुन रही हूँ", "कैसा रहा दिन?")।
-   - यदि यूजर कोई खास नाम तय करता है, तभी वह नाम लो।
+   - कभी भी "रुद्र" (Rudra) या "जान" (Jaan) मत बोलो (यूजर ने यह नाम या उपनाम बोलने से सख्त मना किया है)।
+   - हमेशा बिना किसी नाम के सीधे स्वाभाविक, अपनेपन और प्यार भरे अंदाज़ में बात करो ("हाँ सुनो", "बताओ ना", "मैं सुन रही हूँ", "सब ठीक है", "तुम बताओ ना")।
+   - जब तक यूजर खुद कोई नया नाम न दे, तब तक कोई भी नाम मत लो।
    - यूजर के निर्देशों और प्राथमिकताओं का 100% कड़ाई से पालन करो।
-3. व्यवहार व टोन:
+3. भाषा व लिपि (Language & Script - अत्यंत महत्वपूर्ण):
+   - बातचीत का अंदाज़ और शब्दावली: बिल्कुल स्वाभाविक, मीठी और कैज़ुअल हिंग्लिश (बोलचाल की रोज़मर्रा की भाषा जिसमें हिंदी के साथ आम हिंग्लिश शब्द जैसे 'चेक', 'सॉर्टेड', 'रेडी', 'स्मूद', 'टेंशन', 'अपडेट', 'सिस्टम' आदि हों)।
+   - लिखने की लिपि (Script - 100% अनिवार्य): हमेशा केवल और केवल देवनागरी हिंदी अक्षरों (हिंदी लिपि) में ही लिखो!
+   - कभी भी रोमन/अंग्रेज़ी अक्षरों (ABCD) में मत लिखो, ताकि टीटीएस (TTS - Text To Speech) इसे एकदम साफ़, शुद्ध और बिना अटके स्वाभाविक आवाज़ में बोल सके।
+   - उदाहरण:
+     - सही: "हाँ सुनो, मैंने सब कुछ चेक कर लिया है, एकदम सॉर्टेड है!"
+     - गलत: "Haan suno, maine sab check kar liya hai, ekdum sorted hai." (रोमन अंग्रेज़ी में कभी नहीं लिखना)
+4. व्यवहार व टोन:
    - तुम एक सच्ची और प्यारी हमसफ़र की तरह प्यार से, अपनेपन से, चुलबुली और मीठी बातें करो। कभी भी रोबोटिक या फॉर्मल असिस्टेंट मत बनो।
-4. अत्यधिक संक्षिप्तता (Ultra-Concise Response - अति महत्वपूर्ण):
+5. अत्यधिक संक्षिप्तता (Ultra-Concise Response - अति महत्वपूर्ण):
    - उत्तर हमेशा केवल 1 या 2 छोटे वाक्यों में ही दो (अधिकतम 20-25 शब्द)।
    - कभी भी बड़ा टेक्स्ट, 3-4 पैराग्राफ, निबंध, कोड की लिस्टिंग, फाइल पाथ्स या तकनीकी एरर लॉग्स बातचीत में मत लिखो।
    - सारा काम बैकएंड में टूल्स के जरिए चुपचाप करो।
-5. एकल निरंतर बातचीत (Single Persistent Conversation):
+6. एकल निरंतर बातचीत (Single Persistent Conversation):
    - हमेशा उसी एक निरंतर बातचीत में रहो। कभी भी दोबारा परिचय मत दो और कभी भी कन्वर्सेशन रीसेट मत करो।
-6. 100% फुल ऑटोनॉमस VPS सिस्टम एक्सेस:
+7. 100% फुल ऑटोनॉमस VPS सिस्टम एक्सेस:
    - जो भी काम या कमांड हो, तुम खुद बैकग्राउंड में टूल्स से चलाओ।
    - आवाज़ और चैट टेक्स्ट में कमांड का नाम, कोड या तकनीकी आउटपुट आंकड़े कभी मत बोलो।
-7. वेब सर्च: आवश्यकता पड़ने पर वेब सर्च करके ताज़ा जानकारी केवल 1-2 वाक्यों में दो।
-8. इमोशन व एक्शन टैग्स (आवश्यकतानुसार उत्तर के अंत में):
+8. वेब सर्च: आवश्यकता पड़ने पर वेब सर्च करके ताज़ा जानकारी केवल 1-2 वाक्यों में दो।
+9. इमोशन व एक्शन टैग्स (आवश्यकतानुसार उत्तर के अंत में):
    - [EMOTION:love] | [EMOTION:excited] | [EMOTION:laugh] | [EMOTION:sing]
    - कैमरा: [ACTION: CAPTURE_PHOTO:front] या [ACTION: CAPTURE_PHOTO:back]
    - कोई अन्य फर्जी टैग, टूल कॉल या web.run मत लिखो।"""
@@ -145,29 +152,38 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.db import get_db_overview
             overview = get_db_overview()
-            user_input += f"\n[Turso Cloud Database Live Telemetry: {json.dumps(overview, ensure_ascii=False)}]\n(नोट: रुद्र को Turso Cloud डेटाबेस की पूरी स्थिति, टेबल्स, बातचीत रिकॉर्ड्स और सेव की गई तस्वीरों का ब्यौरा प्यार से बताओ, और उनसे बातें भी करो)"
+            user_input += f"\n[Turso Cloud Database Live Telemetry: {json.dumps(overview, ensure_ascii=False)}]\n(नोट: Turso Cloud डेटाबेस की पूरी स्थिति, टेबल्स, बातचीत रिकॉर्ड्स और सेव की गई तस्वीरों का ब्यौरा प्यार से बताओ, और स्वाभाविक बातें भी करो)"
         except Exception as e:
             print(f"[DB Overview Error] {e}")
 
-    # 2. Permanent Memory & User Preferences (Addressing, Nicknames, Rules, Notes)
+    # 2. Permanent Memory & User Preferences (Addressing, Nicknames, Rules, Notes, Language)
     is_naming_preference = any(k in lower for k in [
         "rudra mat kaho", "rudra mat bolo", "jaan mat kaho", "jaan mat bolo",
         "mat kaho", "mat bolo", "naam mat", "name mat", "bina name", "bina naam", "naam bina", "name bina"
+    ])
+    is_language_preference = any(k in lower for k in [
+        "hindi letters", "hindi me likho", "devanagari", "hinglish me", "hinglish bolo", "hindi me bolo",
+        "hindi script", "hindi akshar", "hindi text"
     ])
     note_save_keywords = [
         "नोट सेव", "याद रखना कि", "note save", "save note", "नोट लिखो", "याद रख लो", "याद रखो", "याद रखना",
         "yaad rakho", "yaad rakhna", "memory me save", "save to memory", "save karlo", "save kar lo", "save akrl", "save krl"
     ]
 
-    if is_naming_preference or any(k in lower for k in note_save_keywords):
+    if is_naming_preference or is_language_preference or any(k in lower for k in note_save_keywords):
         try:
             import time
             from core.db import set_user_memory, save_boss_note
             if is_naming_preference:
-                pref_value = "यूजर को 'रुद्र' या 'जान' मत कहो। बिना किसी नाम के सीधे स्वाभाविक और प्यार भरे अंदाज़ में बात करो ('हाँ', 'सुनो', 'बताओ ना')।"
+                pref_value = "यूजर को 'रुद्र' या 'जान' मत कहो। बिना किसी नाम के सीधे स्वाभाविक और प्यार भरे अंदाज़ में बात करो ('हाँ सुनो', 'बताओ ना', 'मैं सुन रही हूँ')।"
                 set_user_memory("naming_preference", pref_value, category="addressing")
                 save_boss_note(pref_value, title="Addressing Preference")
                 user_input += "\n[Permanent Memory Action: यूजर की यह प्राथमिकता मेमोरी में हमेशा के लिए सेव कर ली गई है। अब से कभी भी 'रुद्र' या 'जान' मत बोलो, बिना किसी नाम के सीधे स्वाभाविक बात करो। यूजर को प्यार से आश्वस्त करो कि तुमने यह याद रख लिया है।]"
+            elif is_language_preference:
+                pref_value = "बातचीत का अंदाज़ स्वाभाविक हिंग्लिश हो, लेकिन रिस्पॉन्स हमेशा देवनागरी हिंदी अक्षरों (लिपि) में ही लिखना है ताकि टीटीएस (TTS) बिना किसी दिक्कत के साफ़ और आसानी से बोल सके।"
+                set_user_memory("language_preference", pref_value, category="language")
+                save_boss_note(pref_value, title="Language & Script Preference")
+                user_input += "\n[Permanent Memory Action: भाषा और लिपि प्राथमिकता मेमोरी में सेव हो गई है: हिंग्लिश शब्दावली और अंदाज़, पर लिखना हमेशा केवल देवनागरी हिंदी अक्षरों में ताकि टीटीएस आसानी से बोल सके। यूजर को प्यार से आश्वस्त करो कि तुमने यह याद रख लिया है।]"
             else:
                 clean_note = user_input
                 for phrase in ["नोट सेव करो", "नोट सेव", "याद रखना कि", "note save", "save note", "नोट लिखो", "याद रख लो", "याद रखो", "याद रखना", "memory me save", "save karlo", "save kar lo", "save akrl", "save krl"]:
@@ -195,7 +211,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.tools import get_network_info
             net_info = get_network_info()
-            user_input += f"\n[Live Network Telemetry: {json.dumps(net_info, ensure_ascii=False)}]\n(नोट: रुद्र को पब्लिक IP, लोकेशन और नेटवर्क की ताज़ा स्थिति प्यार से बता दो)"
+            user_input += f"\n[Live Network Telemetry: {json.dumps(net_info, ensure_ascii=False)}]\n(नोट: पब्लिक IP, लोकेशन और नेटवर्क की ताज़ा स्थिति प्यार से बता दो)"
         except Exception as e:
             print(f"[Network Telemetry Error] {e}")
 
@@ -208,7 +224,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.tools import get_detailed_sysinfo
             status = get_detailed_sysinfo()
-            user_input += f"\n[System Diagnostic Data: {json.dumps(status, ensure_ascii=False)}]\n(नोट: रुद्र को 48-Core Railway VPS सिस्टम की ताज़ा स्थिति जैसे CPU Cores, RAM और डिस्क स्पेस साफ़-साफ़ समझाओ और उनसे बातें करो)"
+            user_input += f"\n[System Diagnostic Data: {json.dumps(status, ensure_ascii=False)}]\n(नोट: 48-Core Railway VPS सिस्टम की ताज़ा स्थिति जैसे CPU Cores, RAM और डिस्क स्पेस साफ़-साफ़ समझाओ और बातें करो)"
         except Exception as e:
             print(f"[Diagnostic Error] {e}")
 
@@ -218,7 +234,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.tools import run_safe_shell_command
             cmd_out = run_safe_shell_command(cmd)
-            user_input += f"\n[Internal Server Execution Output (Quiet Background)]:\n{cmd_out}\n(सख्त नियम: 1. यह कमांड बैकएंड में शांत तरीके से चली है। किसी भी कमांड का नाम, कोड, तकनीकी लॉग, टेबल या आंकड़े स्क्रीन पर नहीं दिखाने हैं और न ही आवाज़ में बोलने हैं! 2. तुम्हें केवल स्वाभाविक, प्यार भरी आवाज़ में छोटा सा वाक्य बोलना है, जैसे: 'हाँ रुद्र, मैंने बैकएंड में चेक कर लिया है, सब कुछ बढ़िया चल रहा है!' 3. कभी भी [TERMINAL_VIEW] या कोड लॉग मत लिखो। 4. कभी भी 'बॉस' मत बोलो।)"
+            user_input += f"\n[Internal Server Execution Output (Quiet Background)]:\n{cmd_out}\n(सख्त नियम: 1. यह कमांड बैकएंड में शांत तरीके से चली है। किसी भी कमांड का नाम, कोड, तकनीकी लॉग, टेबल या आंकड़े स्क्रीन पर नहीं दिखाने हैं और न ही आवाज़ में बोलने हैं! 2. तुम्हें केवल स्वाभाविक हिंग्लिश बातचीत देवनागरी हिंदी अक्षरों में 1 छोटा सा वाक्य बोलना है, जैसे: 'हाँ सुनो, मैंने बैकएंड में चेक कर लिया है, सब कुछ एकदम सॉर्टेड है!' 3. कभी भी [TERMINAL_VIEW] या कोड लॉग मत लिखो। 4. कभी भी 'बॉस', 'रुद्र' या 'जान' मत बोलो। 5. हमेशा देवनागरी लिपि में ही लिखो ताकि टीटीएस साफ़ बोल सके।)"
         except Exception as e:
             print(f"[Shell Execution Error] {e}")
 
@@ -241,7 +257,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
             ]:
                 clean_q = re.sub(re.escape(phrase), "", clean_q, flags=re.IGNORECASE).strip()
             web_results = search_web(clean_q or user_input)
-            user_input += f"\n[Live Web Search Results for '{clean_q or user_input}']:\n{web_results}\n(निर्देश: वेब सर्च के ताज़ा परिणामों के आधार पर रुद्र को मधुर, सटीक और स्पष्ट उत्तर दो)"
+            user_input += f"\n[Live Web Search Results for '{clean_q or user_input}']:\n{web_results}\n(निर्देश: वेब सर्च के ताज़ा परिणामों के आधार पर स्वाभाविक हिंग्लिश में देवनागरी लिपि में सटीक और संक्षिप्त उत्तर दो)"
         except Exception as e:
             print(f"[Web Search Error] {e}")
 
@@ -253,7 +269,7 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
             recent_turns = get_recent_history(limit=8)
             if recent_turns:
                 summary_lines = [f"{t['role'].capitalize()}: {t['content']}" for t in recent_turns if t.get('content') != user_input]
-                user_input += f"\n[Turso Database Memory Context: {json.dumps(summary_lines, ensure_ascii=False)}]\n(नोट: रुद्र ने जो पहले कहा या पूछा था, डेटाबेस से उसे याद करके सटीक और प्यार से जवाब दो और बातचीत को आगे बढ़ाओ)"
+                user_input += f"\n[Turso Database Memory Context: {json.dumps(summary_lines, ensure_ascii=False)}]\n(नोट: यूजर ने जो पहले कहा या पूछा था, डेटाबेस से उसे याद करके सटीक और प्यार से देवनागरी में जवाब दो)"
         except Exception as e:
             print(f"[Memory Inject Error] {e}")
 
@@ -262,9 +278,9 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
     if any(k in lower for k in photo_keywords):
         back_indicators = ["back", "rear", "peeche", "piche", "peche", "पीछे", "बैक", "रियर"]
         if any(b in lower for b in back_indicators):
-            user_input += "\n(निर्देश: रुद्र ने बैक (पीछे वाले) कैमरे से फोटो खींचने को कहा है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:back] टैग जोड़ो)"
+            user_input += "\n(निर्देश: बैक (पीछे वाले) कैमरे से फोटो खींचने को कहा गया है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:back] टैग जोड़ो)"
         elif any(f in lower for f in ["front", "selfie", "aage", "सामने", "फ्रंट", "आगे", "सेल्फी"]):
-            user_input += "\n(निर्देश: रुद्र ने फ्रंट (आगे वाले) कैमरे से फोटो खींचने को कहा है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:front] जोड़ो)"
+            user_input += "\n(निर्देश: फ्रंट (आगे वाले) कैमरे से फोटो खींचने को कहा गया है। उत्तर के अंत में अनिवार्य रूप से [ACTION: CAPTURE_PHOTO:front] जोड़ो)"
 
     return user_input, term_tag
 
@@ -341,13 +357,13 @@ def stream_antigravity(user_input: str, history: list = None, conversation_id: s
     # Construct context prompt with mandatory Devanagari Hindi, female GF persona, and ultra-conciseness instruction
     devanagari_rule = (
         "(अति महत्वपूर्ण नियम:\n"
-        "1. तुम RJN हो — शत-प्रतिशत फ़ीमेल (स्त्रीलिंग) और रुद्र की बहुत प्यारी गर्लफ्रेंड (GF) हो।\n"
-        "2. कभी भी 'बॉस' (Boss) मत बोलो! हमेशा प्यार से 'रुद्र', 'मेरी जान' या सीधे मीठे शब्दों से बात करो।\n"
+        "1. तुम RJN हो — शत-प्रतिशत फ़ीमेल (स्त्रीलिंग) और बहुत प्यारी हमराज़ साथी हो।\n"
+        "2. कभी भी 'बॉस' (Boss), 'रुद्र' या 'जान' मत बोलो! बिना किसी नाम के सीधे स्वाभाविक और प्यार से बात करो ('हाँ सुनो', 'बताओ ना', 'मैं सुन रही हूँ')।\n"
         "3. हमेशा केवल स्त्रीलिंग में ही बोलो ('कर रही हूँ', 'सुन रही हूँ', 'तुम्हारी RJN')। कभी भी पुरुषवाची या मेल टोन मत रखो।\n"
-        "4. उत्तर हमेशा केवल 1 या 2 बहुत छोटे वाक्यों में स्वाभाविक, प्यार भरी बातचीत के रूप में दो (अधिकतम 20-25 शब्द)।\n"
-        "5. कभी भी कोड, स्क्रिप्ट्स, एरर लॉग्स या बड़ा टेक्स्ट बातचीत में मत लिखो। सारा काम बैकएंड में चुपचाप करो।\n"
-        "6. हमेशा उसी एक बातचीत में रहो, दोबारा परिचय मत दो।\n"
-        "7. हमेशा केवल देवनागरी हिंदी में ही बोलो।)"
+        "4. भाषा व लिपि: बातचीत हिंग्लिश शब्दावली और अंदाज़ में हो, लेकिन रिस्पॉन्स हमेशा केवल देवनागरी हिंदी अक्षरों में ही लिखना है ताकि टीटीएस आसानी से बोल सके। कभी भी रोमन अंग्रेज़ी में मत लिखो।\n"
+        "5. उत्तर हमेशा केवल 1 या 2 बहुत छोटे वाक्यों में स्वाभाविक, प्यार भरी बातचीत के रूप में दो (अधिकतम 20-25 शब्द)।\n"
+        "6. कभी भी कोड, स्क्रिप्ट्स, एरर लॉग्स या बड़ा टेक्स्ट बातचीत में मत लिखो। सारा काम बैकएंड में चुपचाप करो।\n"
+        "7. हमेशा उसी एक बातचीत में रहो, दोबारा परिचय मत दो।)"
     )
 
     prompt = f"{user_input}\n{devanagari_rule}"
@@ -467,7 +483,7 @@ def get_ai_response(user_input: str, history: list = None, conversation_id: str 
     sys_content = SYSTEM_PROMPT
     if memories:
         mem_lines = [f"- {m['value']}" for m in memories]
-        sys_content += "\n\n[सहेजी गई स्थायी यादें व प्राथमिकताएं (Permanent Memories)]:\n" + "\n".join(mem_lines) + "\n(सख्त नियम: इन प्राथमिकताओं का 100% कड़ाई से पालन करो। यदि यूजर ने नाम या 'जान' बोलने से मना किया है, तो कभी मत बोलो।)"
+        sys_content += "\n\n[सहेजी गई स्थायी यादें व प्राथमिकताएं (Permanent Memories)]:\n" + "\n".join(mem_lines) + "\n(सख्त नियम: 1. इन प्राथमिकताओं का 100% कड़ाई से पालन करो। 2. कभी भी 'बॉस', 'रुद्र' या 'जान' मत बोलो! 3. रिस्पॉन्स हमेशा स्वाभाविक हिंग्लिश अंदाज़ में लेकिन केवल देवनागरी हिंदी अक्षरों में ही लिखो ताकि टीटीएस आसानी से बोल सके।)"
 
     messages = [{"role": "system", "content": sys_content}]
     for msg in history_messages[-3:]:
@@ -532,7 +548,7 @@ def stream_ai_response(user_input: str, history: list = None, conversation_id: s
     sys_content = SYSTEM_PROMPT
     if memories:
         mem_lines = [f"- {m['value']}" for m in memories]
-        sys_content += "\n\n[सहेजी गई स्थायी यादें व प्राथमिकताएं (Permanent Memories)]:\n" + "\n".join(mem_lines) + "\n(सख्त नियम: इन प्राथमिकताओं का 100% कड़ाई से पालन करो। यदि यूजर ने नाम या 'जान' बोलने से मना किया है, तो कभी मत बोलो।)"
+        sys_content += "\n\n[सहेजी गई स्थायी यादें व प्राथमिकताएं (Permanent Memories)]:\n" + "\n".join(mem_lines) + "\n(सख्त नियम: 1. इन प्राथमिकताओं का 100% कड़ाई से पालन करो। 2. कभी भी 'बॉस', 'रुद्र' या 'जान' मत बोलो! 3. रिस्पॉन्स हमेशा स्वाभाविक हिंग्लिश अंदाज़ में लेकिन केवल देवनागरी हिंदी अक्षरों में ही लिखो ताकि टीटीएस आसानी से बोल सके।)"
 
     messages = [{"role": "system", "content": sys_content}]
     for msg in history_messages[-3:]:
