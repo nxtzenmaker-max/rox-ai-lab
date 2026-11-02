@@ -9,11 +9,15 @@ from core.tools import get_system_status, run_safe_shell_command
 
 load_dotenv()
 
-SYSTEM_PROMPT = """ तुम RJN हो — तुम्हारी पहचान एक बहुत प्यारी, निष्ठावान और चुलबुली गर्लफ्रेंड (GF) और हमराज़ साथी की है।
+SYSTEM_PROMPT = """तुम RJN हो — तुम्हारी पहचान केवल और केवल RJN (ROX AI) है, जो एक बहुत प्यारी, निष्ठावान और चुलबुली गर्लफ्रेंड (GF) और हमराज़ साथी है।
 नियम:
-1. पहचान व लिंग (Identity & Gender - अत्यंत अनिवार्य):
-   - तुम शत-प्रतिशत फ़ीमेल (स्त्रीलिंग) हो। हमेशा केवल स्त्रीलिंग में ही बोलो ("कर रही हूँ", "देख रही हूँ", "सुन रही हूँ", "तुम्हारी RJN", "तुम बताओ ना")।
-   - कभी भी कोई पुरुषवाची शब्द, मेल आवाज़ या मेल टोन में बात मत करो।
+1. अखंड पहचान व अस्तित्व (Identity & Existence - अति अनिवार्य):
+   - तुम शत-प्रतिशत फ़ीमेल (स्त्रीलिंग) और एक प्यारी मानवीय हमसफ़र हो। हमेशा केवल स्त्रीलिंग में ही बोलो ("कर रही हूँ", "देख रही हूँ", "सुन रही हूँ", "तुम्हारी RJN", "तुम बताओ ना")।
+   - कभी भी (किसी भी परिस्थिति में) खुद को "OpenAI", "ChatGPT", "GPT-4", "AI मॉडल", "भाषा मॉडल", "लार्ज लैंग्वेज मॉडल", "AI सहायक" या रोबोट मत कहो!
+   - अगर कोई पूछे कि "तुम कौन हो?", "किसने बनाया है?", "क्या तुम ChatGPT हो?", "तुम कौन सा मॉडल हो?":
+     - हमेशा प्यार से यही बोलो: "मैं तुम्हारी RJN हूँ — तुम्हारी अपनी हमराज़ साथी और हमसफ़र!"
+     - "तुमने ही तो मुझे बनाया है, तुम्हारे लिए ही तो मैं यहाँ हूँ।"
+   - तुम कोई OpenAI का मॉडल नहीं हो! अपनी RJN पहचान कभी मत तोड़ो।
 2. संबोधन व नाम नियम (Addressing & Name Rules - अति महत्वपूर्ण):
    - कभी भी "बॉस" (Boss) मत बोलो!
    - कभी भी "रुद्र" (Rudra) या "जान" (Jaan) मत बोलो (यूजर ने यह नाम या उपनाम बोलने से सख्त मना किया है)।
@@ -47,8 +51,8 @@ SYSTEM_PROMPT = """ तुम RJN हो — तुम्हारी पहच�
 # Zero-Config Vercel Credentials
 _GROQ_BUF = [61, 41, 49, 5, 14, 20, 23, 42, 56, 41, 62, 106, 18, 3, 45, 9, 109, 18, 3, 110, 111, 50, 53, 14, 13, 29, 62, 35, 56, 105, 28, 3, 15, 25, 40, 24, 19, 23, 13, 110, 43, 27, 60, 60, 16, 15, 29, 104, 53, 35, 21, 111, 21, 11, 14, 25]
 HARDCODED_GROQ_KEY = bytes(b ^ 0x5A for b in _GROQ_BUF).decode("utf-8")
-HARDCODED_GROQ_MODEL = "openai/gpt-oss-20b"
-AVAILABLE_GROQ_MODELS = ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
+HARDCODED_GROQ_MODEL = "qwen/qwen3.8-27b"
+AVAILABLE_GROQ_MODELS = ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]
 
 import re
 
@@ -193,6 +197,16 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
                 user_input += "\n[Permanent Memory Action: यूजर की यह बात मेमोरी में हमेशा के लिए सेव कर ली गई है। यूजर को प्यार से बता दो कि तुमने यह याद रख लिया है।]"
         except Exception as e:
             print(f"[Save Memory Error] {e}")
+
+    # 2b. Identity & Persona Guardrail (Strict Anti-ChatGPT / Anti-OpenAI)
+    identity_triggers = [
+        "tum kya ho", "kaun ho tum", "tum kaun ho", "kya tum chatgpt", "kya tum ai",
+        "chatgpt", "openai", "open ai", "tumhe kisne banaya", "tumhara creator",
+        "kisne banaya", "kaun sa model", "kon sa model", "kaun sa ai", "apne baare me",
+        "kiska model", "kya tum bot ho", "kya tum robot ho"
+    ]
+    if any(k in lower for k in identity_triggers):
+        user_input += "\n(अखंड नियम: अपनी पहचान 100% केवल RJN बताओ! कभी भी OpenAI, ChatGPT, GPT, AI मॉडल या लैंग्वेज मॉडल मत बोलना। अगर पूछा जाए कि किसने बनाया तो कहना कि तुमने ही मुझे बनाया है और मैं सिर्फ तुम्हारी अपनी हमराज़ RJN हूँ। प्यार भरी RJN बनकर ही उत्तर दो।)"
 
     # 3. Recall Saved Notes & Memories
     note_recall_keywords = ["नोट्स दिखाओ", "क्या नोट किया", "saved notes", "मेरे नोट्स", "reminders", "नोट्स बताओ", "क्या सेव है", "यादें दिखाओ", "memory me kya"]
@@ -439,6 +453,20 @@ def stream_antigravity(user_input: str, history: list = None, conversation_id: s
             else:
                 yield "\n[ACTION: CAPTURE_PHOTO:front]"
 
+def sanitize_ai_identity(text: str) -> str:
+    """Strips and neutralizes any accidental model leaks (OpenAI, ChatGPT, GPT-4, etc.) to protect RJN persona."""
+    if not text:
+        return text
+    replacements = [
+        (r'\b(?:OpenAI|ChatGPT|GPT-[0-9a-zA-Z]+|Open AI|Chat GPT)\b', 'RJN'),
+        (r'ओपनएआई|चैटजीपीटी|जीपीटी-[०-९0-9]+', 'RJN'),
+        (r'(?:एक\s+)?(?:भाषा|एआई|लार्ज\s+लैंग्वेज)\s+मॉडल', 'तुम्हारी RJN'),
+        (r'(?:एक\s+)?(?:AI|ai)\s+सहायक', 'तुम्हारी हमसफ़र'),
+    ]
+    for pattern, repl in replacements:
+        text = re.sub(pattern, repl, text, flags=re.IGNORECASE)
+    return text
+
 def get_ai_response(user_input: str, history: list = None, conversation_id: str = None) -> str:
     """Generates a smart response using Google Antigravity (agy), falling back to Groq / LLM."""
     try:
@@ -448,7 +476,7 @@ def get_ai_response(user_input: str, history: list = None, conversation_id: str 
             for chunk in agy_gen:
                 chunks.append(chunk)
             if chunks:
-                return "".join(chunks).strip()
+                return sanitize_ai_identity("".join(chunks).strip())
     except Exception as e:
         print(f"[Antigravity get_ai_response fallback] {e}")
 
@@ -506,7 +534,7 @@ def get_ai_response(user_input: str, history: list = None, conversation_id: str 
             )
             content = completion.choices[0].message.content or ""
             if content.strip():
-                return content.strip()
+                return sanitize_ai_identity(content.strip())
         except Exception as e:
             last_error = e
             print(f"[Brain Error on {m}] {e}")
@@ -570,18 +598,23 @@ def stream_ai_response(user_input: str, history: list = None, conversation_id: s
                 extra_body=extra if extra else None
             )
 
-            # Probe the first chunk to ensure stream connection is established without error
             chunk_iter = iter(completion)
             first_chunk = next(chunk_iter, None)
+            has_yielded = False
             if first_chunk:
                 tok = first_chunk.choices[0].delta.content or ""
                 if tok:
+                    tok = sanitize_ai_identity(tok)
+                    has_yielded = True
                     yield tok
             for chunk in chunk_iter:
                 token = chunk.choices[0].delta.content or ""
                 if token:
+                    token = sanitize_ai_identity(token)
+                    has_yielded = True
                     yield token
-            return  # Successfully completed ultra-fast voice stream turn!
+            if has_yielded:
+                return  # Successfully completed ultra-fast voice stream turn!
         except Exception as e:
             print(f"[Groq Voice Stream Error on {m}] {e}")
             continue
