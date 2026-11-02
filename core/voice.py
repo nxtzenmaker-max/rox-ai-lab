@@ -123,7 +123,7 @@ async def transcribe_audio_deepgram(audio_bytes: bytes, mime_type: str = "audio/
     if clean_mime in ["application/octet-stream", ""]:
         clean_mime = "audio/wav"
 
-    url = "https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&language=hi"
+    url = "https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&language=hi&keywords=VPS:5&keywords=system:4&keywords=status:4&keywords=GitHub:4&keywords=RJN:5&keywords=server:3&keywords=memory:3"
     headers = {
         "Authorization": f"Token {api_key}",
         "Content-Type": clean_mime
@@ -137,6 +137,11 @@ async def transcribe_audio_deepgram(audio_bytes: bytes, mime_type: str = "audio/
             result = await resp.json()
             try:
                 transcript = result["results"]["channels"][0]["alternatives"][0]["transcript"]
+                if transcript:
+                    # Normalize common Hindi STT misrecognitions for technical and voice commands
+                    transcript = re.sub(r'\b(?:vp\s*lx|vpps|vpx|bpss|वीपीएस|विपिएस)\b', 'VPS', transcript, flags=re.IGNORECASE)
+                    transcript = re.sub(r'\b(?:चौथी\s*status|चौथी\s*स्थिति)\b', 'VPS status', transcript, flags=re.IGNORECASE)
+                    transcript = re.sub(r'\b(?:status\s+से\s+करो|स्टेटस\s+से\s+करो)\b', 'status check karo', transcript, flags=re.IGNORECASE)
                 return transcript
             except (KeyError, IndexError):
                 return ""
