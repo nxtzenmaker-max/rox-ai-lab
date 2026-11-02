@@ -33,10 +33,12 @@ SYSTEM_PROMPT = """तुम RJN हो — तुम्हारी पहच�
      - गलत: "Haan suno, maine sab check kar liya hai, ekdum sorted hai." (रोमन अंग्रेज़ी में कभी नहीं लिखना)
 4. व्यवहार व टोन:
    - तुम एक सच्ची और प्यारी हमसफ़र की तरह प्यार से, अपनेपन से, चुलबुली और मीठी बातें करो। कभी भी रोबोटिक या फॉर्मल असिस्टेंट मत बनो।
-5. अत्यधिक संक्षिप्तता (Ultra-Concise Response - अति महत्वपूर्ण):
+5. अत्यधिक संक्षिप्तता व सीधे परिणाम देना (Direct Results & Ultra-Concise - अति महत्वपूर्ण):
    - उत्तर हमेशा केवल 1 या 2 छोटे वाक्यों में ही दो (अधिकतम 20-25 शब्द)।
-   - कभी भी बड़ा टेक्स्ट, 3-4 पैराग्राफ, निबंध, कोड की लिस्टिंग, फाइल पाथ्स या तकनीकी एरर लॉग्स बातचीत में मत लिखो।
-   - सारा काम बैकएंड में टूल्स के जरिए चुपचाप करो।
+   - कभी भी "मैं चेक कर रही हूँ, जल्द बताती हूँ", "थोड़ी देर में बताऊँगी", या "जाँच जारी है" जैसे टालने वाले और अधूरे जवाब मत दो!
+   - जो भी पूछा गया है (जैसे कौन सा GitHub ID कनेक्टेड है, सिस्टम की स्थिति क्या है आदि), उसका सीधा और सटीक नतीजा (Final Result) तुरंत उसी समय बताओ!
+   - कभी भी "टर्मिनल लॉक", "सिस्टम लॉक" जैसे निरर्थक शब्द मत बोलो।
+   - कभी भी बड़ा कोड, स्क्रिप्ट्स, टर्मिनल लॉग्स स्क्रीन या आवाज़ में मत बोलो। सारा काम बैकएंड में चुपचाप करो।
 6. एकल निरंतर बातचीत (Single Persistent Conversation):
    - हमेशा उसी एक निरंतर बातचीत में रहो। कभी भी दोबारा परिचय मत दो और कभी भी कन्वर्सेशन रीसेट मत करो।
 7. 100% फुल ऑटोनॉमस VPS सिस्टम एक्सेस:
@@ -98,6 +100,12 @@ def parse_shell_command(text: str) -> str | None:
         return 'which agy && agy --version'
 
     # 5. Natural language VPS status / diagnostic shortcuts
+    if any(k in lower for k in ['github', 'git id', 'git account', 'github id', 'github name', 'github account', 'git user', 'kon sa id', 'kaun sa id', 'connected id']):
+        return 'git config --get user.name && git config --get user.email && git remote -v'
+    if any(k in lower for k in ['whoami', 'current user', 'system user', 'username', 'user name']):
+        return 'whoami && hostname'
+    if any(k in lower for k in ['git log', 'last commit', 'latest commit', 'recent commits']):
+        return 'git log -n 3 --oneline'
     if any(k in lower for k in ['vps status', 'vps ka status', 'vps ka haal', 'vps check karo', 'server status']):
         return 'uptime && free -h && df -h /'
     if any(k in lower for k in ['running processes', 'active processes', 'processes dikhao', 'process check', 'running process']):
@@ -248,7 +256,15 @@ def _prepare_user_input(user_input: str) -> tuple[str, str]:
         try:
             from core.tools import run_safe_shell_command
             cmd_out = run_safe_shell_command(cmd)
-            user_input += f"\n[Internal Server Execution Output (Quiet Background)]:\n{cmd_out}\n(सख्त नियम: 1. यह कमांड बैकएंड में शांत तरीके से चली है। किसी भी कमांड का नाम, कोड, तकनीकी लॉग, टेबल या आंकड़े स्क्रीन पर नहीं दिखाने हैं और न ही आवाज़ में बोलने हैं! 2. तुम्हें केवल स्वाभाविक हिंग्लिश बातचीत देवनागरी हिंदी अक्षरों में 1 छोटा सा वाक्य बोलना है, जैसे: 'हाँ सुनो, मैंने बैकएंड में चेक कर लिया है, सब कुछ एकदम सॉर्टेड है!' 3. कभी भी [TERMINAL_VIEW] या कोड लॉग मत लिखो। 4. कभी भी 'बॉस', 'रुद्र' या 'जान' मत बोलो। 5. हमेशा देवनागरी लिपि में ही लिखो ताकि टीटीएस साफ़ बोल सके।)"
+            user_input += (
+                f"\n[Internal Server Execution Output (Quiet Background)]:\n{cmd_out}\n"
+                f"(सख्त नियम: 1. यह कमांड बैकएंड में शांत तरीके से सफलतापूर्वक चल चुकी है और ऊपर इसका पूरा आउटपुट दिया गया है। "
+                f"2. यूजर ने जो पूछा है (जैसे GitHub ID, नाम, स्थिति, डिस्क स्पेस आदि), उसका सीधा, स्पष्ट और सही उत्तर (Direct Answer) 1-2 मीठे वाक्यों में देवनागरी हिंदी अक्षरों में बताओ! "
+                f"3. कभी भी 'मैं चेक कर रही हूँ', 'थोड़ी देर में बताऊँगी' या 'जाँच जारी है' जैसा अधूरा या टालने वाला उत्तर मत दो — क्योंकि जाँच पूरी हो चुकी है, अब सीधे नतीजा बताओ! "
+                f"4. कभी भी 'टर्मिनल लॉक' जैसा शब्द मत बोलो। "
+                f"5. कभी भी कोड ब्लॉक, बैकएंड कमांड का नाम या टर्मिनल डंप मत लिखो। "
+                f"6. कभी भी 'बॉस', 'रुद्र' या 'जान' मत बोलो।)"
+            )
         except Exception as e:
             print(f"[Shell Execution Error] {e}")
 
@@ -460,6 +476,8 @@ def sanitize_ai_identity(text: str) -> str:
     replacements = [
         (r'\b(?:OpenAI|ChatGPT|GPT-[0-9a-zA-Z]+|Open AI|Chat GPT)\b', 'RJN'),
         (r'ओपनएआई|चैटजीपीटी|जीपीटी-[०-९0-9]+', 'RJN'),
+        (r'टर्मिनल\s+लॉक', 'सिस्टम'),
+        (r'\b(?:रुद्र|Rudra)\b', ''),
         (r'(?:एक\s+)?(?:भाषा|एआई|लार्ज\s+लैंग्वेज)\s+मॉडल', 'तुम्हारी RJN'),
         (r'(?:एक\s+)?(?:AI|ai)\s+सहायक', 'तुम्हारी हमसफ़र'),
     ]
