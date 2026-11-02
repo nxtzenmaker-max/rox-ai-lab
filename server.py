@@ -33,6 +33,10 @@ app.add_middleware(
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+HUMANOID_ASSETS = os.path.join(STATIC_DIR, "humanoid", "assets")
+if os.path.exists(HUMANOID_ASSETS):
+    app.mount("/assets", StaticFiles(directory=HUMANOID_ASSETS), name="assets")
+
 def get_vps_voice_url() -> str:
     """Returns the live high-speed Railway VPS voice endpoint."""
     env_url = os.getenv("VPS_VOICE_URL", "").strip()
@@ -108,6 +112,16 @@ async def serve_index():
 async def serve_call_screen():
     with open(os.path.join(STATIC_DIR, "call.html"), "r", encoding="utf-8") as f:
         return f.read()
+
+@app.get("/humanoid", response_class=HTMLResponse)
+@app.get("/avatar", response_class=HTMLResponse)
+@app.get("/2d", response_class=HTMLResponse)
+async def serve_humanoid():
+    humanoid_index = os.path.join(STATIC_DIR, "humanoid", "index.html")
+    if os.path.exists(humanoid_index):
+        with open(humanoid_index, "r", encoding="utf-8") as f:
+            return f.read()
+    raise HTTPException(status_code=404, detail="Humanoid page not found")
 
 @app.get("/health")
 async def health_check():

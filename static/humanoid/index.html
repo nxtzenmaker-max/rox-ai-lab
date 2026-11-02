@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#06070b">
+<title>RJN — 2D Humanoid AI Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #06070b;
+  --violet: #a78bfa;
+  --violet-glow: rgba(167, 139, 250, 0.3);
+  --pink: #f472b6;
+  --pink-glow: rgba(244, 114, 182, 0.3);
+  --cyan: #38bdf8;
+  --cyan-glow: rgba(56, 189, 248, 0.25);
+  --current-glow: var(--violet-glow);
+  --border: rgba(167, 139, 250, 0.2);
+  --glass: rgba(18, 14, 30, 0.72);
+  --glass-active: rgba(30, 24, 48, 0.88);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: #f5f3ff;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: radial-gradient(circle at 50% 15%, #180e29 0%, #090611 50%, #06070b 100%);
+}
+
+/* Background Animated Cosmic Nebula */
+.nebula-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.nebula-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+  animation: nebulaDrift 20s ease-in-out infinite alternate;
+}
+
+.orb-1 {
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.45), transparent 70%);
+  top: 10%;
+  left: 15%;
+  animation-duration: 22s;
+}
+
+.orb-2 {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.35), transparent 70%);
+  bottom: 25%;
+  right: 15%;
+  animation-duration: 28s;
+  animation-delay: -7s;
+}
+
+@keyframes nebulaDrift {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, -40px) scale(1.15); }
+  100% { transform: translate(-25px, 30px) scale(0.95); }
+}
+
+/* Header Bar */
+.top {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+  background: linear-gradient(180deg, rgba(9, 6, 17, 0.95) 0%, rgba(9, 6, 17, 0.6) 70%, transparent 100%);
+  backdrop-filter: blur(16px);
+  animation: dropDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes dropDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.brand-capsule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-gem {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f472b6, #a78bfa);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: #fff;
+  box-shadow: 0 0 16px rgba(244, 114, 182, 0.4);
+  animation: gemGlow 4s ease-in-out infinite alternate;
+}
+
+@keyframes gemGlow {
+  0% { box-shadow: 0 0 12px rgba(244, 114, 182, 0.3); transform: scale(1); }
+  100% { box-shadow: 0 0 22px rgba(167, 139, 250, 0.6); transform: scale(1.04); }
+}
+
+.brand-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-name {
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  font-size: 15px;
+  color: #f5f3ff;
+}
+
+.brand-sub {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #a78bfa;
+  text-transform: uppercase;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #c4b5fd;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  background: rgba(18, 14, 30, 0.7);
+  padding: 6px 14px;
+  border-radius: 30px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  transition: all 0.3s ease;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.3); opacity: 0.6; }
+}
+
+.status-pill.speaking {
+  color: #f472b6;
+  border-color: rgba(244, 114, 182, 0.45);
+  box-shadow: 0 0 16px rgba(244, 114, 182, 0.25);
+}
+.status-pill.speaking .status-dot {
+  background: #f472b6;
+  box-shadow: 0 0 10px #f472b6;
+  animation: speakPulse 0.4s ease-in-out infinite alternate;
+}
+@keyframes speakPulse {
+  from { transform: scale(0.9); }
+  to { transform: scale(1.4); }
+}
+
+.status-pill.listening {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+}
+.status-pill.listening .status-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: listenPulse 0.7s ease-in-out infinite alternate;
+}
+@keyframes listenPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.5); }
+}
+
+/* Stage & Avatar Container */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 5;
+  perspective: 1200px;
+}
+
+/* Living Bioluminescent Aura */
+.glow {
+  position: absolute;
+  width: 60%;
+  max-width: 440px;
+  height: 55%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, var(--current-glow), transparent 70%);
+  filter: blur(45px);
+  pointer-events: none;
+  z-index: 1;
+  transition: background 0.8s ease, transform 0.6s ease;
+  animation: auraBreathe 6s ease-in-out infinite alternate;
+}
+
+@keyframes auraBreathe {
+  0% { transform: scale(0.92) translateY(0); opacity: 0.7; }
+  100% { transform: scale(1.1) translateY(-10px); opacity: 0.95; }
+}
+
+/* Avatar Wrap with Smooth Natural Float */
+.avatar-wrap {
+  position: relative;
+  height: 100%;
+  max-height: calc(100dvh - 180px);
+  width: auto;
+  aspect-ratio: 2/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: 50% 68%;
+  z-index: 2;
+  will-change: transform;
+  animation: naturalFloat 5.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  transition: transform 0.15s ease-out;
+}
+
+@keyframes naturalFloat {
+  0% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  30% {
+    transform: translateY(-8px) rotate(0.4deg) scale(1.008);
+  }
+  65% {
+    transform: translateY(-4px) rotate(-0.3deg) scale(0.996);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+}
+
+.avatar-wrap.talking {
+  animation: naturalTalking 2.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+@keyframes naturalTalking {
+  0% { transform: translateY(0) rotate(0) scale(1); }
+  25% { transform: translateY(-5px) rotate(-0.5deg) scale(1.012); }
+  50% { transform: translateY(-2px) rotate(0.4deg) scale(1); }
+  75% { transform: translateY(-6px) rotate(-0.3deg) scale(1.008); }
+  100% { transform: translateY(0) rotate(0) scale(1); }
+}
+
+/* Avatar Image */
+.avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 28px rgba(167, 139, 250, 0.18));
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+  transition: filter 0.5s ease;
+}
+
+/* Mouth Layer */
+.mouth {
+  position: absolute;
+  left: 52.2%;
+  top: 13.1%;
+  width: 3.8%;
+  height: 1.05%;
+  border-radius: 50%;
+  background: #5d243d;
+  opacity: 0;
+  transform: scaleY(0.25) scaleX(0.9);
+  box-shadow: 0 0 6px #e99ab8;
+  pointer-events: none;
+  transform-origin: center center;
+  transition: opacity 0.15s ease;
+  will-change: transform, opacity;
+}
+
+.talking .mouth {
+  opacity: 0.88;
+  animation: smoothMouth 0.19s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+
+@keyframes smoothMouth {
+  0% {
+    transform: scaleY(0.25) scaleX(0.8);
+    border-radius: 50%;
+  }
+  50% {
+    transform: scaleY(1.3) scaleX(1.05);
+    border-radius: 40% 40% 60% 60%;
+  }
+  100% {
+    transform: scaleY(2.0) scaleX(1.15);
+    border-radius: 35% 35% 65% 65%;
+  }
+}
+
+/* Eye Covers for Natural Blinking */
+.eye-cover {
+  position: absolute;
+  width: 5.3%;
+  height: 1.25%;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #f7d4ce, #efb9b2);
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: center top;
+  will-change: opacity, transform;
+}
+
+.eye-left {
+  left: 44.7%;
+  top: 10.25%;
+  transform: rotate(-8deg);
+}
+
+.eye-right {
+  left: 52.5%;
+  top: 9.35%;
+  transform: rotate(-8deg);
+}
+
+.blink .eye-cover {
+  opacity: 1;
+  animation: naturalBlink 0.18s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes naturalBlink {
+  0% { transform: rotate(-8deg) scaleY(0.1); opacity: 0.3; }
+  45% { transform: rotate(-8deg) scaleY(1.1); opacity: 1; }
+  100% { transform: rotate(-8deg) scaleY(0.1); opacity: 0; }
+}
+
+/* Fluid Caption Box */
+.caption-card {
+  position: absolute;
+  bottom: 12px;
+  left: 16px;
+  right: 16px;
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
+  color: #ede9fe;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  padding: 8px 18px;
+  background: rgba(14, 11, 24, 0.72);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  border-radius: 18px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 6;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.caption-text {
+  animation: captionIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes captionIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Control Panel */
+.panel {
+  padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent 0%, rgba(9, 6, 17, 0.85) 30%, rgba(6, 7, 11, 0.98) 100%);
+  backdrop-filter: blur(20px);
+  z-index: 10;
+  animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.btn {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--glass);
+  color: #f5f3ff;
+  border-radius: 16px;
+  min-height: 48px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  border-color: rgba(167, 139, 250, 0.45);
+  box-shadow: 0 8px 24px rgba(167, 139, 250, 0.22);
+  background: var(--glass-active);
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.96);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.35), rgba(244, 114, 182, 0.35));
+  border-color: rgba(244, 114, 182, 0.45);
+  box-shadow: 0 4px 16px rgba(244, 114, 182, 0.25);
+}
+
+.btn.primary:hover {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.5), rgba(244, 114, 182, 0.5));
+  box-shadow: 0 8px 28px rgba(244, 114, 182, 0.4);
+}
+
+.mood-row {
+  display: flex;
+  gap: 10px;
+  max-width: 520px;
+  margin: 10px auto 0 auto;
+}
+
+.mood-row .btn {
+  flex: 1;
+  font-size: 12.5px;
+}
+
+.btn.active-mood {
+  border-color: var(--pink);
+  background: rgba(244, 114, 182, 0.18);
+  box-shadow: 0 0 16px rgba(244, 114, 182, 0.3);
+  color: #fff;
+}
+
+/* Ripple Animation Effect */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(0);
+  animation: rippleEffect 0.6s linear;
+  pointer-events: none;
+}
+
+@keyframes rippleEffect {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Chat Input Bar for Real AI Brain Connection */
+.ai-chat-bar {
+  display: flex;
+  gap: 8px;
+  max-width: 520px;
+  margin: 10px auto 0 auto;
+}
+
+.ai-input {
+  flex: 1;
+  background: rgba(14, 10, 24, 0.75);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-radius: 14px;
+  padding: 10px 14px;
+  color: #f5f3ff;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.ai-input:focus {
+  border-color: var(--pink);
+  box-shadow: 0 0 16px rgba(244, 114, 182, 0.25);
+  background: rgba(18, 14, 32, 0.9);
+}
+
+.ai-input::placeholder {
+  color: rgba(196, 181, 253, 0.45);
+}
+
+.btn-send-ai {
+  width: 46px;
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(244, 114, 182, 0.4);
+  background: linear-gradient(135deg, #f472b6, #a78bfa);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+}
+
+.btn-send-ai:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(244, 114, 182, 0.4);
+}
+
+.btn-send-ai:active {
+  transform: scale(0.92);
+}
+
+.hint {
+  text-align: center;
+  color: #8b829b;
+  font-size: 10.5px;
+  margin-top: 10px;
+  letter-spacing: 0.02em;
+}
+
+@media(min-width: 700px) {
+  .avatar-wrap {
+    max-height: calc(100dvh - 210px);
+  }
+  .panel {
+    max-width: 580px;
+    width: 100%;
+    margin: 0 auto;
+    border-radius: 24px 24px 0 0;
+  }
+  .top {
+    padding: 0 32px;
+  }
+}
+</style>
+</head>
+<body>
+
+  <!-- Ambient Cosmic Nebula -->
+  <div class="nebula-bg">
+    <div class="nebula-orb orb-1"></div>
+    <div class="nebula-orb orb-2"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="top">
+    <div class="brand-capsule">
+      <div class="brand-gem">R</div>
+      <div class="brand-info">
+        <span class="brand-name">RJN</span>
+        <span class="brand-sub">2D Neural Companion</span>
+      </div>
+    </div>
+    <div class="status-pill" id="status">
+      <span class="status-dot"></span>
+      <span id="statusLabel">● READY</span>
+    </div>
+  </header>
+
+  <!-- Interactive Stage -->
+  <main class="stage" id="stage">
+    <div class="glow" id="glow"></div>
+    <div class="avatar-wrap" id="avatarWrap">
+      <img class="avatar" src="assets/rjn-avatar.png" alt="RJN anime avatar">
+      <span class="eye-cover eye-left"></span>
+      <span class="eye-cover eye-right"></span>
+      <span class="mouth" id="mouth"></span>
+    </div>
+    <div class="caption-card" id="captionCard">
+      <span class="caption-text" id="caption">नमस्ते! मैं RJN हूँ — तुम्हारी हमराज़ AI साथी ✨</span>
+    </div>
+  </main>
+
+  <!-- Controls Panel -->
+  <section class="panel">
+    <div class="controls-grid">
+      <button class="btn primary" id="speak">
+        <span>▶</span> Speak demo
+      </button>
+      <button class="btn" id="mic">
+        <span>🎙</span> Microphone
+      </button>
+      <button class="btn" id="blinkBtn">
+        <span>😉</span> Blink
+      </button>
+    </div>
+
+    <div class="mood-row">
+      <button class="btn active-mood" data-mood="happy">☺ Happy</button>
+      <button class="btn" data-mood="thinking">◌ Thinking</button>
+      <button class="btn" data-mood="neutral">○ Neutral</button>
+    </div>
+
+    <!-- Live AI Chat Bar -->
+    <div class="ai-chat-bar">
+      <input type="text" id="aiInput" class="ai-input" placeholder="RJN से कुछ भी पूछो या बात करो..." autocomplete="off">
+      <button class="btn-send-ai" id="aiSendBtn" title="Send to RJN">➤</button>
+    </div>
+
+    <div class="hint">Smooth 2D Neural Avatar · Interactive Tilt & Voice Lip-Sync · RJN AI</div>
+  </section>
+
+<script>
+  const wrap = document.getElementById('avatarWrap');
+  const stage = document.getElementById('stage');
+  const glow = document.getElementById('glow');
+  const statusEl = document.getElementById('status');
+  const statusLabel = document.getElementById('statusLabel');
+  const caption = document.getElementById('caption');
+  const mouth = document.getElementById('mouth');
+
+  let micStream = null;
+  let audioCtx = null;
+  let raf = null;
+  let currentAudio = null;
+
+  // --- Smooth Natural Blinking System ---
+  function blink() {
+    wrap.classList.add('blink');
+    setTimeout(() => {
+      wrap.classList.remove('blink');
+    }, 180);
+  }
+
+  // Periodic natural random blinking (with occasional double blinks)
+  function scheduleNextBlink() {
+    const delay = 2400 + Math.random() * 3200;
+    setTimeout(() => {
+      blink();
+      // 18% chance of immediate cute double-blink
+      if (Math.random() < 0.18) {
+        setTimeout(blink, 240);
+      }
+      scheduleNextBlink();
+    }, delay);
+  }
+  scheduleNextBlink();
+
+  // --- Smooth Status & Talking State ---
+  function setStatus(state, text) {
+    statusEl.className = 'status-pill ' + state;
+    statusLabel.textContent = text;
+  }
+
+  function setCaption(text) {
+    caption.style.animation = 'none';
+    caption.offsetHeight; // trigger reflow
+    caption.textContent = text;
+    caption.style.animation = 'captionIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)';
+  }
+
+  function talk(on) {
+    wrap.classList.toggle('talking', on);
+    if (on) {
+      setStatus('speaking', '● SPEAKING');
+    } else {
+      setStatus('', '● READY');
+      mouth.style.transform = 'scaleY(0.25) scaleX(0.9)';
+    }
+  }
+
+  // --- 3D Parallax Tilt on Mouse / Touch Move ---
+  let targetRotX = 0, targetRotY = 0;
+  let curRotX = 0, curRotY = 0;
+
+  function updateTilt() {
+    curRotX += (targetRotX - curRotX) * 0.08;
+    curRotY += (targetRotY - curRotY) * 0.08;
+    wrap.style.transform = `perspective(1000px) rotateX(${curRotX}deg) rotateY(${curRotY}deg)`;
+    requestAnimationFrame(updateTilt);
+  }
+  requestAnimationFrame(updateTilt);
+
+  function handlePointerMove(e) {
+    const rect = stage.getBoundingClientRect();
+    const x = (e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : rect.left + rect.width / 2)) - rect.left;
+    const y = (e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : rect.top + rect.height / 2)) - rect.top;
+    const normX = (x / rect.width - 0.5) * 2;
+    const normY = (y / rect.height - 0.5) * 2;
+    targetRotY = normX * 10;
+    targetRotX = -normY * 7;
+  }
+
+  stage.addEventListener('mousemove', handlePointerMove);
+  stage.addEventListener('touchmove', handlePointerMove, { passive: true });
+  stage.addEventListener('mouseleave', () => { targetRotX = 0; targetRotY = 0; });
+  stage.addEventListener('touchend', () => { targetRotX = 0; targetRotY = 0; });
+
+  // --- Ripple Effect on Buttons ---
+  document.querySelectorAll('.btn, .btn-send-ai').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      const circle = document.createElement('span');
+      const diameter = Math.max(btn.clientWidth, btn.clientHeight);
+      const radius = diameter / 2;
+      const rect = btn.getBoundingClientRect();
+      circle.style.width = circle.style.height = `${diameter}px`;
+      circle.style.left = `${e.clientX - rect.left - radius}px`;
+      circle.style.top = `${e.clientY - rect.top - radius}px`;
+      circle.classList.add('ripple');
+      const ripple = btn.querySelector('.ripple');
+      if (ripple) ripple.remove();
+      btn.appendChild(circle);
+    });
+  });
+
+  // --- Mood Switching with Smooth Atmospheric Shift ---
+  document.querySelectorAll('[data-mood]').forEach(b => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('[data-mood]').forEach(btn => btn.classList.remove('active-mood'));
+      b.classList.add('active-mood');
+      const mood = b.dataset.mood;
+      if (mood === 'happy') {
+        document.documentElement.style.setProperty('--current-glow', 'rgba(244, 114, 182, 0.42)');
+        setCaption("RJN बहुत खुश है! तुम्हारे साथ बात करके हमेशा अच्छा लगता है ✨");
+        blink();
+        setTimeout(blink, 250);
+      } else if (mood === 'thinking') {
+        document.documentElement.style.setProperty('--current-glow', 'rgba(56, 189, 248, 0.35)');
+        setCaption("RJN सोच रही है... एक प्यारा सा ख्याल आया है 💭");
+      } else {
+        document.documentElement.style.setProperty('--current-glow', 'rgba(167, 139, 250, 0.3)');
+        setCaption("RJN बिल्कुल तैयार और शांत है 🌸");
+      }
+    });
+  });
+
+  // --- Speak Demo ---
+  function speakDemo() {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (!('speechSynthesis' in window)) {
+      setCaption('Speech synthesis is not supported in this browser.');
+      return;
+    }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance("नमस्ते! मैं तुम्हारी RJN हूँ। बताओ ना, आज हम क्या नया और मजेदार करने वाले हैं?");
+    u.rate = 0.94;
+    u.pitch = 1.18;
+    u.lang = 'hi-IN';
+    u.onstart = () => {
+      talk(true);
+      setCaption('RJN बोल रही है… सुनो ना!');
+    };
+    u.onend = () => {
+      talk(false);
+      setCaption('नमस्ते! मैं RJN हूँ — तुम्हारी हमराज़ AI साथी ✨');
+    };
+    u.onerror = () => talk(false);
+    speechSynthesis.speak(u);
+  }
+
+  document.getElementById('speak').addEventListener('click', speakDemo);
+  document.getElementById('blinkBtn').addEventListener('click', blink);
+
+  // --- Live Microphone Audio-Reactive Lerp Lip Sync ---
+  let targetMouthScale = 0.25;
+  let currentMouthScale = 0.25;
+
+  function updateMouthPhysics() {
+    currentMouthScale += (targetMouthScale - currentMouthScale) * 0.32;
+    if (wrap.classList.contains('talking')) {
+      mouth.style.opacity = '0.9';
+      mouth.style.transform = `scaleY(${currentMouthScale}) scaleX(${Math.min(1.25, 0.8 + currentMouthScale * 0.2)})`;
+    }
+    if (micStream || currentAudio) {
+      requestAnimationFrame(updateMouthPhysics);
+    }
+  }
+
+  async function toggleMic() {
+    if (micStream) {
+      micStream.getTracks().forEach(t => t.stop());
+      micStream = null;
+      if (raf) cancelAnimationFrame(raf);
+      talk(false);
+      targetMouthScale = 0.25;
+      document.getElementById('mic').innerHTML = '<span>🎙</span> Microphone';
+      setCaption('Microphone stopped.');
+      return;
+    }
+
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioCtx.createMediaStreamSource(micStream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.3;
+      source.connect(analyser);
+
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      document.getElementById('mic').innerHTML = '<span>■</span> Stop mic';
+      setCaption('Listening — कुछ भी बोलो, RJN के लिप्स स्मूथली रिएक्ट करेंगे!');
+      setStatus('listening', '● LISTENING');
+
+      requestAnimationFrame(updateMouthPhysics);
+
+      function loop() {
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / data.length);
+        const isVoice = rms > 0.022;
+
+        if (isVoice) {
+          wrap.classList.add('talking');
+          targetMouthScale = Math.min(2.4, 0.4 + rms * 18);
+        } else {
+          targetMouthScale = 0.25;
+          if (targetMouthScale < 0.3) {
+            wrap.classList.remove('talking');
+          }
+        }
+        raf = requestAnimationFrame(loop);
+      }
+      loop();
+    } catch (e) {
+      console.error(e);
+      setCaption('Mic permission needed. Please allow microphone access!');
+      setStatus('', '● MIC BLOCKED');
+    }
+  }
+
+  document.getElementById('mic').addEventListener('click', toggleMic);
+
+  // --- Real RJN AI Brain & Voice Connection ---
+  const aiInput = document.getElementById('aiInput');
+  const aiSendBtn = document.getElementById('aiSendBtn');
+
+  async function sendToRjn(message) {
+    const text = message || aiInput.value.trim();
+    if (!text) return;
+
+    aiInput.value = '';
+    setCaption(`तुम: "${text}"`);
+    setStatus('speaking', '● THINKING...');
+
+    try {
+      // 1. Fetch AI response from RJN server
+      const chatResp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await chatResp.json();
+      const reply = data.reply || "हाँ, मैं सुन रही हूँ!";
+
+      setCaption(`RJN: "${reply}"`);
+      setStatus('speaking', '● SPEAKING');
+
+      // 2. Play High-Fidelity Voice via /api/tts
+      try {
+        const ttsResp = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: reply })
+        });
+        const blob = await ttsResp.blob();
+        if (currentAudio) currentAudio.pause();
+        currentAudio = new Audio(URL.createObjectURL(blob));
+
+        // Connect audio element to analyser for real lip-sync
+        const aCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const aSrc = aCtx.createMediaElementSource(currentAudio);
+        const an = aCtx.createAnalyser();
+        an.fftSize = 512;
+        aSrc.connect(an);
+        an.connect(aCtx.destination);
+
+        const aData = new Uint8Array(an.frequencyBinCount);
+        talk(true);
+        requestAnimationFrame(updateMouthPhysics);
+
+        let audioRaf = null;
+        function audioLoop() {
+          an.getByteTimeDomainData(aData);
+          let sum = 0;
+          for (let i = 0; i < aData.length; i++) {
+            const v = (aData[i] - 128) / 128;
+            sum += v * v;
+          }
+          const rms = Math.sqrt(sum / aData.length);
+          targetMouthScale = Math.min(2.5, 0.3 + rms * 20);
+          if (currentAudio && !currentAudio.paused) {
+            audioRaf = requestAnimationFrame(audioLoop);
+          }
+        }
+
+        currentAudio.onplay = () => {
+          if (aCtx.state === 'suspended') aCtx.resume();
+          audioLoop();
+        };
+
+        currentAudio.onended = () => {
+          talk(false);
+          targetMouthScale = 0.25;
+          if (audioRaf) cancelAnimationFrame(audioRaf);
+        };
+
+        await currentAudio.play();
+      } catch (voiceErr) {
+        // Fallback to browser synthesis if TTS endpoint is unavailable
+        console.warn("TTS fallback", voiceErr);
+        speakDemoFallback(reply);
+      }
+
+    } catch (err) {
+      console.error(err);
+      setCaption("RJN: Network issue आ रहा है, एक बार फिर से पूछो ना!");
+      talk(false);
+    }
+  }
+
+  function speakDemoFallback(text) {
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.94;
+    u.pitch = 1.18;
+    u.lang = 'hi-IN';
+    u.onstart = () => talk(true);
+    u.onend = () => talk(false);
+    speechSynthesis.speak(u);
+  }
+
+  aiSendBtn.addEventListener('click', () => sendToRjn());
+  aiInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendToRjn();
+  });
+</script>
+</body>
+</html>

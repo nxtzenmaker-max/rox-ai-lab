@@ -51,6 +51,12 @@
     background: radial-gradient(circle, rgba(244, 114, 182, 0.28) 0%, rgba(168, 85, 247, 0.16) 45%, rgba(0, 0, 0, 0) 70%);
     z-index: 0;
     transition: opacity 0.5s ease, background 0.8s ease;
+    animation: ambientBreathing 7s ease-in-out infinite alternate;
+  }
+  @keyframes ambientBreathing {
+    0% { transform: translate(-50%, -50%) scale(0.94); opacity: 0.65; }
+    50% { transform: translate(-50%, -50%) scale(1.08); opacity: 0.92; }
+    100% { transform: translate(-50%, -50%) scale(0.94); opacity: 0.65; }
   }
 
   /* UI Layer (HUD) */
@@ -73,6 +79,13 @@
     width: 100%;
     max-width: 560px;
     margin: 0 auto;
+    pointer-events: auto;
+    animation: dropDownSmooth 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  @keyframes dropDownSmooth {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
     pointer-events: auto;
   }
   .brand-capsule {
@@ -194,8 +207,13 @@
     gap: 6px;
     max-height: 125px;
     overflow-y: auto;
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: subtitlesRise 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     pointer-events: auto;
+  }
+  @keyframes subtitlesRise {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .subtitles-box::-webkit-scrollbar {
     width: 3px;
@@ -273,8 +291,13 @@
     backdrop-filter: blur(28px);
     -webkit-backdrop-filter: blur(28px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
-    transition: border-color 0.25s, box-shadow 0.25s;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: dockRise 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
     gap: 8px;
+  }
+  @keyframes dockRise {
+    from { opacity: 0; transform: translateY(22px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .unified-dock:focus-within {
     border-color: rgba(244, 114, 182, 0.45);
@@ -441,6 +464,9 @@
       <span class="brand-tag">AI COMPANION</span>
     </div>
     <div class="top-actions">
+      <a href="/humanoid" class="icon-btn" title="Switch to 2D Avatar" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#f472b6; width:auto; padding:0 12px; gap:5px; border-radius:9999px;">
+        <span>✨</span> 2D Avatar
+      </a>
       <span id="statusLabel" class="status-pill online">ONLINE</span>
       <button id="quickCameraBtn" class="icon-btn" title="Take Selfie / Photo" onclick="capturePhotoAction('front')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
